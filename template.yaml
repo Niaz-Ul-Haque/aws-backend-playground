@@ -66,7 +66,7 @@ Resources:
 Outputs:
   FunctionUrl:
     Description: Lambda Function URL
-    Value: !GetAtt HelloFunctionUrl.FunctionUrl
+    Value: !GetAtt HelloFunction.FunctionUrl
   
   TableName:
     Description: DynamoDB Table Name
