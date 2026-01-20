@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Lambda Function URL with DynamoDB and SSM integration
+
+Globals:
+  Function:
+    Timeout: 15
+    MemorySize: 256
+    Runtime: nodejs20.x
+    Architectures:
+      - arm64
+
+Resources:
+  HelloFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: dist/handler.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref RequestsTable
+          LLM_API_KEY_PARAM: !Ref LlmApiKeyParam
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RequestsTable
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub '${AWS::StackName}/llmApiKey'
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - '*'
+          AllowMethods:
+            - GET
+            - POST
+            - OPTIONS
+          AllowHeaders:
+            - '*'
+
+  RequestsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-requests'
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  LlmApiKeyParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${AWS::StackName}/llmApiKey'
+      Type: String
+      Value: REPLACE_ME
+      Description: LLM API Key placeholder
+
+Outputs:
+  FunctionUrl:
+    Description: Lambda Function URL
+    Value: !GetAtt HelloFunctionUrl.FunctionUrl
+  
+  TableName:
+    Description: DynamoDB Table Name
+    Value: !Ref RequestsTable
+  
+  LlmApiKeyParamName:
+    Description: SSM Parameter Name for LLM API Key
+    Value: !Ref LlmApiKeyParam

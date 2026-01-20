@@ -1,0 +1,106 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  STACK_NAME: llm-playground
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup AWS SAM
+        uses: aws-actions/setup-sam@v2
+
+      - name: Install dependencies
+        working-directory: src
+        run: npm ci || npm install
+
+      - name: Build TypeScript Lambda
+        working-directory: src
+        run: npm run build
+
+      - name: Build SAM application
+        run: sam build
+
+      - name: Deploy SAM application
+        run: |
+          sam deploy \
+            --stack-name ${{ env.STACK_NAME }} \
+            --resolve-s3 \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --capabilities CAPABILITY_IAM
+
+      - name: Get stack outputs
+        id: stack-outputs
+        run: |
+          FUNCTION_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.STACK_NAME }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`FunctionUrl`].OutputValue' \
+            --output text)
+          
+          TABLE_NAME=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.STACK_NAME }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`TableName`].OutputValue' \
+            --output text)
+          
+          LLM_API_KEY_PARAM=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.STACK_NAME }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`LlmApiKeyParamName`].OutputValue' \
+            --output text)
+          
+          echo "function_url=$FUNCTION_URL" >> $GITHUB_OUTPUT
+          echo "table_name=$TABLE_NAME" >> $GITHUB_OUTPUT
+          echo "llm_api_key_param=$LLM_API_KEY_PARAM" >> $GITHUB_OUTPUT
+
+      - name: Update LLM API Key (if secret exists)
+        if: ${{ secrets.LLM_API_KEY != '' }}
+        run: |
+          aws ssm put-parameter \
+            --name ${{ steps.stack-outputs.outputs.llm_api_key_param }} \
+            --value "${{ secrets.LLM_API_KEY }}" \
+            --type String \
+            --overwrite
+
+      - name: Install seed script dependencies
+        working-directory: scripts
+        run: npm ci || npm install
+
+      - name: Build TypeScript seed script
+        working-directory: scripts
+        run: npm run build
+
+      - name: Seed DynamoDB table
+        run: node scripts/seed.js ${{ steps.stack-outputs.outputs.table_name }}
+
+      - name: Print deployment info
+        run: |
+          echo "✅ Deployment successful!"
+          echo "📍 Function URL: ${{ steps.stack-outputs.outputs.function_url }}"
+          echo "📊 Table Name: ${{ steps.stack-outputs.outputs.table_name }}"

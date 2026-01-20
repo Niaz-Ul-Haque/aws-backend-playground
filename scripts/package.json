@@ -1,0 +1,18 @@
+{
+  "name": "seed-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild seed.ts --bundle --platform=node --target=node20 --format=esm --outfile=seed.js --external:@aws-sdk/*",
+    "seed": "node seed.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.504.0",
+    "@aws-sdk/lib-dynamodb": "^3.504.0"
+  }
+}
