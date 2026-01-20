@@ -36,7 +36,6 @@ Resources:
           AllowMethods:
             - GET
             - POST
-            - OPTIONS
           AllowHeaders:
             - '*'
 
@@ -66,12 +65,12 @@ Resources:
 Outputs:
   FunctionUrl:
     Description: Lambda Function URL
-    Value: !GetAtt HelloFunction.FunctionUrl
-  
+    Value: !GetAtt HelloFunctionUrl.FunctionUrl
+
   TableName:
     Description: DynamoDB Table Name
     Value: !Ref RequestsTable
-  
+
   LlmApiKeyParamName:
     Description: SSM Parameter Name for LLM API Key
     Value: !Ref LlmApiKeyParam
