@@ -23,8 +23,11 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref RequestsTable
-        - SSMParameterReadPolicy:
-            ParameterName: !Sub '${AWS::StackName}-llmApiKey'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}-llmApiKey'
       FunctionUrlConfig:
         AuthType: NONE
         Cors:
