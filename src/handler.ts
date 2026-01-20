@@ -8,6 +8,9 @@ interface ZaiChatRequest {
   }>;
   temperature?: number;
   max_tokens?: number;
+  thinking?: {
+    type: 'enabled' | 'disabled';
+  };
 }
 
 interface ZaiChatResponse {
@@ -91,7 +94,10 @@ export const handler = async (
         },
       ],
       temperature: 1.0,
-      max_tokens: 1024,
+      max_tokens: 6000,
+      thinking: {
+        type: 'disabled',
+      },
     };
 
     console.log('========== API REQUEST PREPARATION ==========');
