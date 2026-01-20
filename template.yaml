@@ -4,7 +4,7 @@ Description: Lambda Function URL with DynamoDB and SSM integration
 
 Globals:
   Function:
-    Timeout: 15
+    Timeout: 60
     MemorySize: 256
     Runtime: nodejs20.x
     Architectures:
@@ -19,7 +19,7 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref RequestsTable
-          LLM_API_KEY_PARAM: !Ref LlmApiKeyParam
+          LLM_API_KEY: !Sub '{{resolve:ssm:${AWS::StackName}-llmApiKey}}'
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref RequestsTable
