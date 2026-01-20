@@ -1,3 +1,5 @@
+DONE
+
 # AWS Lambda Backend Playground
 
 A complete AWS serverless application using **TypeScript**, AWS SAM with automated GitHub Actions deployment via OIDC.
