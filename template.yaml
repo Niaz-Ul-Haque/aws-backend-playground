@@ -24,7 +24,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref RequestsTable
         - SSMParameterReadPolicy:
-            ParameterName: !Sub '${AWS::StackName}/llmApiKey'
+            ParameterName: !Sub '${AWS::StackName}-llmApiKey'
       FunctionUrlConfig:
         AuthType: NONE
         Cors:
@@ -55,7 +55,7 @@ Resources:
   LlmApiKeyParam:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub '/${AWS::StackName}/llmApiKey'
+      Name: !Sub '${AWS::StackName}-llmApiKey'
       Type: String
       Value: REPLACE_ME
       Description: LLM API Key placeholder
