@@ -79,8 +79,7 @@ jobs:
           echo "table_name=$TABLE_NAME" >> $GITHUB_OUTPUT
           echo "llm_api_key_param=$LLM_API_KEY_PARAM" >> $GITHUB_OUTPUT
 
-      - name: Update LLM API Key (if secret exists)
-        if: ${{ secrets.LLM_API_KEY != '' }}
+      - name: Update LLM API Key
         run: |
           aws ssm put-parameter \
             --name ${{ steps.stack-outputs.outputs.llm_api_key_param }} \
