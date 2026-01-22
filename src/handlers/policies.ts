@@ -32,39 +32,39 @@ export async function handler(
   const method = event.requestContext?.http?.method || 'UNKNOWN';
   const path = event.requestContext?.http?.path || '/api/policies';
 
+  console.log('=== Policies Handler Start ===');
+  console.log('Method:', method);
+  console.log('Path:', path);
+  console.log('Query params:', event.queryStringParameters);
+  console.log('Path params:', event.pathParameters);
   logRequest(method, path);
-
-  // Handle CORS preflight
-  if (method === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-      body: '',
-    };
-  }
 
   // Only allow GET
   if (method !== 'GET') {
+    console.log('Invalid method, returning 405');
     return errorResponse('Method not allowed', 405);
   }
 
   try {
     // Check if we have a policy ID in the path
     const policyId = getRequiredPathParam(event.pathParameters, 'id');
+    console.log('Policy ID from path:', policyId);
 
     if (policyId) {
-      // Get single policy
-      return await handleGetPolicy(policyId);
+      console.log('Fetching single policy:', policyId);
+      const result = await handleGetPolicy(policyId);
+      console.log('=== Policies Handler End ===');
+      return result;
     } else {
-      // List policies
-      return await handleListPolicies(event.queryStringParameters);
+      console.log('Listing policies with filters');
+      const result = await handleListPolicies(event.queryStringParameters);
+      console.log('=== Policies Handler End ===');
+      return result;
     }
   } catch (error) {
+    console.error('=== Policies Handler Error ===');
     console.error('Policies handler error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
     return errorResponse(
       'Failed to process request',
       500,
@@ -79,12 +79,15 @@ export async function handler(
 async function handleGetPolicy(
   policyId: string
 ): Promise<APIGatewayProxyResultV2> {
+  console.log('handleGetPolicy - fetching policy:', policyId);
   const policy = await getPolicyById(policyId);
 
   if (!policy) {
+    console.log('Policy not found:', policyId);
     return notFoundResponse('Policy');
   }
 
+  console.log('Policy found:', policyId);
   return successResponse(policy);
 }
 
@@ -94,11 +97,14 @@ async function handleGetPolicy(
 async function handleListPolicies(
   queryParams?: Record<string, string | undefined>
 ): Promise<APIGatewayProxyResultV2> {
+  console.log('handleListPolicies - query params:', queryParams);
   const params = parseQueryParams(queryParams);
 
   // Handle special filter cases
   if (params.filter === 'expiring') {
+    console.log('Fetching expiring policies');
     const policies = await getExpiringPolicies();
+    console.log('Expiring policies count:', policies.length);
     return successResponse({
       policies,
       total: policies.length,
@@ -107,7 +113,9 @@ async function handleListPolicies(
   }
 
   if (params.filter === 'overdue') {
+    console.log('Fetching overdue policies');
     const policies = await getOverduePolicies();
+    console.log('Overdue policies count:', policies.length);
     return successResponse({
       policies,
       total: policies.length,
@@ -131,18 +139,24 @@ async function handleListPolicies(
     filters.payment_status = params.payment_status as PolicyFilters['payment_status'];
   }
 
+  console.log('Filters:', JSON.stringify(filters));
   // Check if summary view is requested
   const summary = params.summary === 'true';
+  console.log('Summary view:', summary);
 
   if (summary) {
+    console.log('Fetching policy summaries');
     const policies = await getPolicySummaries(filters);
+    console.log('Policies fetched, count:', policies.length);
     return successResponse({
       policies,
       total: policies.length,
     });
   }
 
+  console.log('Fetching full policies');
   const policies = await getPolicies(filters);
+  console.log('Policies fetched, count:', policies.length);
   return successResponse({
     policies,
     total: policies.length,

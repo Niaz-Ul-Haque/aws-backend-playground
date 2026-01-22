@@ -6,13 +6,13 @@ import type { APIGatewayProxyResultV2 } from 'aws-lambda';
 import type { ApiResponse } from '../../types';
 
 /**
- * CORS headers for all responses
+ * Response headers with CORS support
  */
-const CORS_HEADERS = {
+const RESPONSE_HEADERS = {
+  'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-  'Access-Control-Max-Age': '86400',
+  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
 };
 
 /**
@@ -30,8 +30,7 @@ export function successResponse<T>(
   return {
     statusCode,
     headers: {
-      'Content-Type': 'application/json',
-      ...CORS_HEADERS,
+      ...RESPONSE_HEADERS,
     },
     body: JSON.stringify(body),
   };
@@ -54,8 +53,7 @@ export function errorResponse(
   return {
     statusCode,
     headers: {
-      'Content-Type': 'application/json',
-      ...CORS_HEADERS,
+      ...RESPONSE_HEADERS,
     },
     body: JSON.stringify(body),
   };
@@ -68,17 +66,6 @@ export function notFoundResponse(
   resource = 'Resource'
 ): APIGatewayProxyResultV2 {
   return errorResponse(`${resource} not found`, 404);
-}
-
-/**
- * Create an OPTIONS response for CORS preflight
- */
-export function corsPreflightResponse(): APIGatewayProxyResultV2 {
-  return {
-    statusCode: 200,
-    headers: CORS_HEADERS,
-    body: '',
-  };
 }
 
 /**

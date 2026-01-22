@@ -14,12 +14,6 @@ Globals:
         TABLE_NAME: !Ref DataTable
         LLM_API_KEY: !Sub '{{resolve:ssm:${AWS::StackName}-llmApiKey}}'
 
-  Api:
-    Cors:
-      AllowMethods: "'GET,POST,PATCH,DELETE,OPTIONS'"
-      AllowHeaders: "'Content-Type,Authorization,X-Requested-With'"
-      AllowOrigin: "'*'"
-
 Resources:
   #############################################
   # API Gateway
@@ -28,11 +22,16 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       Name: !Sub '${AWS::StackName}-api'
-      StageName: prod
+      StageName: Stage
       Description: Ciri AI Backend API
       # Free tier: 1 million API calls per month for 12 months
       EndpointConfiguration:
         Type: REGIONAL
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,PATCH,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+        AllowCredentials: false
 
   #############################################
   # Lambda Functions
@@ -62,12 +61,6 @@ Resources:
             RestApiId: !Ref CiriApi
             Path: /api/chat
             Method: POST
-        ChatOptions:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CiriApi
-            Path: /api/chat
-            Method: OPTIONS
 
   # Clients Handler - Client CRUD operations
   ClientsFunction:
@@ -92,18 +85,6 @@ Resources:
             RestApiId: !Ref CiriApi
             Path: /api/clients/{id}
             Method: GET
-        ClientsOptions:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CiriApi
-            Path: /api/clients
-            Method: OPTIONS
-        ClientsIdOptions:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CiriApi
-            Path: /api/clients/{id}
-            Method: OPTIONS
 
   # Policies Handler - Policy operations
   PoliciesFunction:
@@ -128,18 +109,6 @@ Resources:
             RestApiId: !Ref CiriApi
             Path: /api/policies/{id}
             Method: GET
-        PoliciesOptions:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CiriApi
-            Path: /api/policies
-            Method: OPTIONS
-        PoliciesIdOptions:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CiriApi
-            Path: /api/policies/{id}
-            Method: OPTIONS
 
   # Tasks Handler - Task CRUD and actions
   TasksFunction:
@@ -188,24 +157,6 @@ Resources:
             RestApiId: !Ref CiriApi
             Path: /api/tasks/{id}/complete
             Method: POST
-        TasksOptions:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CiriApi
-            Path: /api/tasks
-            Method: OPTIONS
-        TasksIdOptions:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CiriApi
-            Path: /api/tasks/{id}
-            Method: OPTIONS
-        TasksActionOptions:
-          Type: Api
-          Properties:
-            RestApiId: !Ref CiriApi
-            Path: /api/tasks/{id}/{action}
-            Method: OPTIONS
 
   # Health Check Handler
   HealthFunction:
@@ -274,27 +225,27 @@ Resources:
 Outputs:
   ApiUrl:
     Description: API Gateway URL
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage'
 
   ChatEndpoint:
     Description: Chat API Endpoint
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod/api/chat'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/api/chat'
 
   ClientsEndpoint:
     Description: Clients API Endpoint
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod/api/clients'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/api/clients'
 
   PoliciesEndpoint:
     Description: Policies API Endpoint
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod/api/policies'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/api/policies'
 
   TasksEndpoint:
     Description: Tasks API Endpoint
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod/api/tasks'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/api/tasks'
 
   HealthEndpoint:
     Description: Health Check Endpoint
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod/api/health'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/api/health'
 
   TableName:
     Description: DynamoDB Table Name

@@ -31,39 +31,39 @@ export async function handler(
   const method = event.requestContext?.http?.method || 'UNKNOWN';
   const path = event.requestContext?.http?.path || '/api/clients';
 
+  console.log('=== Clients Handler Start ===');
+  console.log('Method:', method);
+  console.log('Path:', path);
+  console.log('Query params:', event.queryStringParameters);
+  console.log('Path params:', event.pathParameters);
   logRequest(method, path);
-
-  // Handle CORS preflight
-  if (method === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-      body: '',
-    };
-  }
 
   // Only allow GET
   if (method !== 'GET') {
+    console.log('Invalid method, returning 405');
     return errorResponse('Method not allowed', 405);
   }
 
   try {
     // Check if we have a client ID in the path
     const clientId = getRequiredPathParam(event.pathParameters, 'id');
+    console.log('Client ID from path:', clientId);
 
     if (clientId) {
-      // Get single client
-      return await handleGetClient(clientId, event.queryStringParameters);
+      console.log('Fetching single client:', clientId);
+      const result = await handleGetClient(clientId, event.queryStringParameters);
+      console.log('=== Clients Handler End ===');
+      return result;
     } else {
-      // List clients
-      return await handleListClients(event.queryStringParameters);
+      console.log('Listing all clients');
+      const result = await handleListClients(event.queryStringParameters);
+      console.log('=== Clients Handler End ===');
+      return result;
     }
   } catch (error) {
+    console.error('=== Clients Handler Error ===');
     console.error('Clients handler error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
     return errorResponse(
       'Failed to process request',
       500,
@@ -79,17 +79,23 @@ async function handleGetClient(
   clientId: string,
   queryParams?: Record<string, string | undefined>
 ): Promise<APIGatewayProxyResultV2> {
+  console.log('handleGetClient - fetching client:', clientId);
   const client = await getClientById(clientId);
 
   if (!client) {
+    console.log('Client not found:', clientId);
     return notFoundResponse('Client');
   }
 
+  console.log('Client found:', clientId);
   // Check if policies should be included
   const includePolicies = queryParams?.include_policies === 'true';
+  console.log('Include policies:', includePolicies);
 
   if (includePolicies) {
+    console.log('Fetching policies for client:', clientId);
     const policies = await getPolicySummariesForClient(clientId);
+    console.log('Policies fetched, count:', policies.length);
     return successResponse({
       client,
       policies,
@@ -105,6 +111,7 @@ async function handleGetClient(
 async function handleListClients(
   queryParams?: Record<string, string | undefined>
 ): Promise<APIGatewayProxyResultV2> {
+  console.log('handleListClients - query params:', queryParams);
   const params = parseQueryParams(queryParams);
 
   // Build filters from query params
@@ -129,18 +136,24 @@ async function handleListClients(
     filters.account_manager_id = params.account_manager_id;
   }
 
+  console.log('Filters:', JSON.stringify(filters));
   // Check if summary view is requested
   const summary = params.summary === 'true';
+  console.log('Summary view:', summary);
 
   if (summary) {
+    console.log('Fetching client summaries');
     const clients = await getClientSummaries(filters);
+    console.log('Clients fetched, count:', clients.length);
     return successResponse({
       clients,
       total: clients.length,
     });
   }
 
+  console.log('Fetching full clients');
   const clients = await getClients(filters);
+  console.log('Clients fetched, count:', clients.length);
   return successResponse({
     clients,
     total: clients.length,

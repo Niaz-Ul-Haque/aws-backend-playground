@@ -42,57 +42,71 @@ export async function handler(
   const method = event.requestContext?.http?.method || 'UNKNOWN';
   const path = event.requestContext?.http?.path || '/api/tasks';
 
+  console.log('=== Tasks Handler Start ===');
+  console.log('Method:', method);
+  console.log('Path:', path);
+  console.log('Body:', event.body);
+  console.log('Query params:', event.queryStringParameters);
+  console.log('Path params:', event.pathParameters);
   logRequest(method, path, event.body);
-
-  // Handle CORS preflight
-  if (method === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, PATCH, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-      body: '',
-    };
-  }
 
   try {
     // Check for task ID in path
     const taskId = getRequiredPathParam(event.pathParameters, 'id');
     const action = getRequiredPathParam(event.pathParameters, 'action');
+    console.log('Task ID:', taskId, 'Action:', action);
 
     // Handle action endpoints
     if (taskId && action && method === 'POST') {
+      console.log('Handling task action:', action, 'for task:', taskId);
+      let result;
       switch (action) {
         case 'approve':
-          return await handleApproveTask(taskId);
+          result = await handleApproveTask(taskId);
+          break;
         case 'reject':
-          return await handleRejectTask(taskId, event.body);
+          result = await handleRejectTask(taskId, event.body);
+          break;
         case 'complete':
-          return await handleCompleteTask(taskId);
+          result = await handleCompleteTask(taskId);
+          break;
         default:
+          console.log('Unknown action:', action);
           return errorResponse('Unknown action', 400);
       }
+      console.log('=== Tasks Handler End ===');
+      return result;
     }
 
     // Handle CRUD operations
     if (taskId) {
       if (method === 'GET') {
-        return await handleGetTask(taskId);
+        console.log('Fetching single task:', taskId);
+        const result = await handleGetTask(taskId);
+        console.log('=== Tasks Handler End ===');
+        return result;
       } else if (method === 'PATCH') {
-        return await handleUpdateTask(taskId, event.body);
+        console.log('Updating task:', taskId);
+        const result = await handleUpdateTask(taskId, event.body);
+        console.log('=== Tasks Handler End ===');
+        return result;
       }
     }
 
     // List tasks (GET /api/tasks)
     if (method === 'GET') {
-      return await handleListTasks(event.queryStringParameters);
+      console.log('Listing all tasks');
+      const result = await handleListTasks(event.queryStringParameters);
+      console.log('=== Tasks Handler End ===');
+      return result;
     }
 
+    console.log('Method not allowed:', method);
     return errorResponse('Method not allowed', 405);
   } catch (error) {
+    console.error('=== Tasks Handler Error ===');
     console.error('Tasks handler error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
     return errorResponse(
       'Failed to process request',
       500,
@@ -105,12 +119,15 @@ export async function handler(
  * Get a single task by ID
  */
 async function handleGetTask(taskId: string): Promise<APIGatewayProxyResultV2> {
+  console.log('handleGetTask - fetching task:', taskId);
   const task = await getTaskById(taskId);
 
   if (!task) {
+    console.log('Task not found:', taskId);
     return notFoundResponse('Task');
   }
 
+  console.log('Task found:', taskId);
   return successResponse(task);
 }
 
@@ -120,11 +137,14 @@ async function handleGetTask(taskId: string): Promise<APIGatewayProxyResultV2> {
 async function handleListTasks(
   queryParams?: Record<string, string | undefined>
 ): Promise<APIGatewayProxyResultV2> {
+  console.log('handleListTasks - query params:', queryParams);
   const params = parseQueryParams(queryParams);
 
   // Handle special filter cases
   if (params.filter === 'today') {
+    console.log('Fetching today\'s tasks');
     const tasks = await getTodaysTasks();
+    console.log('Today\'s tasks count:', tasks.length);
     return successResponse({
       tasks,
       total: tasks.length,
@@ -133,7 +153,9 @@ async function handleListTasks(
   }
 
   if (params.filter === 'pending-review') {
+    console.log('Fetching pending review tasks');
     const tasks = await getPendingReviewTasks();
+    console.log('Pending review tasks count:', tasks.length);
     return successResponse({
       tasks,
       total: tasks.length,
@@ -142,7 +164,9 @@ async function handleListTasks(
   }
 
   if (params.filter === 'overdue') {
+    console.log('Fetching overdue tasks');
     const tasks = await getOverdueTasks();
+    console.log('Overdue tasks count:', tasks.length);
     return successResponse({
       tasks,
       total: tasks.length,
@@ -169,18 +193,24 @@ async function handleListTasks(
     filters.due_date = params.due_date as TaskFilters['due_date'];
   }
 
+  console.log('Filters:', JSON.stringify(filters));
   // Check if summary view is requested
   const summary = params.summary === 'true';
+  console.log('Summary view:', summary);
 
   if (summary) {
+    console.log('Fetching task summaries');
     const tasks = await getTaskSummaries(filters);
+    console.log('Tasks fetched, count:', tasks.length);
     return successResponse({
       tasks,
       total: tasks.length,
     });
   }
 
+  console.log('Fetching full tasks');
   const tasks = await getTasks(filters);
+  console.log('Tasks fetched, count:', tasks.length);
   return successResponse({
     tasks,
     total: tasks.length,
@@ -194,18 +224,23 @@ async function handleUpdateTask(
   taskId: string,
   body?: string
 ): Promise<APIGatewayProxyResultV2> {
+  console.log('handleUpdateTask - task:', taskId, 'body:', body);
   const updates = parseBody<TaskUpdate>(body);
 
   if (!updates) {
+    console.log('Invalid request body for task update');
     return errorResponse('Invalid request body', 400);
   }
 
+  console.log('Updating task with:', JSON.stringify(updates));
   const task = await updateTask(taskId, updates);
 
   if (!task) {
+    console.log('Task not found for update:', taskId);
     return notFoundResponse('Task');
   }
 
+  console.log('Task updated successfully:', taskId);
   return successResponse(task);
 }
 
@@ -213,18 +248,22 @@ async function handleUpdateTask(
  * Approve an AI-completed task
  */
 async function handleApproveTask(taskId: string): Promise<APIGatewayProxyResultV2> {
+  console.log('handleApproveTask - task:', taskId);
   try {
     const task = await approveTask(taskId);
 
     if (!task) {
+      console.log('Task not found for approval:', taskId);
       return notFoundResponse('Task');
     }
 
+    console.log('Task approved successfully:', taskId);
     return successResponse({
       task,
       message: 'Task approved successfully',
     });
   } catch (error) {
+    console.error('Error approving task:', error);
     return errorResponse(
       error instanceof Error ? error.message : 'Failed to approve task',
       400
@@ -239,20 +278,25 @@ async function handleRejectTask(
   taskId: string,
   body?: string
 ): Promise<APIGatewayProxyResultV2> {
+  console.log('handleRejectTask - task:', taskId, 'body:', body);
   const data = parseBody<{ reason?: string }>(body);
+  console.log('Reject reason:', data?.reason);
 
   try {
     const task = await rejectTask(taskId, data?.reason);
 
     if (!task) {
+      console.log('Task not found for rejection:', taskId);
       return notFoundResponse('Task');
     }
 
+    console.log('Task rejected successfully:', taskId);
     return successResponse({
       task,
       message: 'Task rejected and reset to pending',
     });
   } catch (error) {
+    console.error('Error rejecting task:', error);
     return errorResponse(
       error instanceof Error ? error.message : 'Failed to reject task',
       400
@@ -264,12 +308,15 @@ async function handleRejectTask(
  * Mark a task as complete
  */
 async function handleCompleteTask(taskId: string): Promise<APIGatewayProxyResultV2> {
+  console.log('handleCompleteTask - task:', taskId);
   const task = await completeTask(taskId);
 
   if (!task) {
+    console.log('Task not found for completion:', taskId);
     return notFoundResponse('Task');
   }
 
+  console.log('Task completed successfully:', taskId);
   return successResponse({
     task,
     message: 'Task completed successfully',
