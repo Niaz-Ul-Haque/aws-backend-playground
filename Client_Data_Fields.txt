@@ -1,0 +1,63 @@
+Identification
+ client_id
+ client_type
+ client_status
+ external_client_reference
+Profile
+ first_name
+ middle_name
+ last_name
+ preferred_name
+ date_of_birth
+ gender
+ sin_last4
+ marital_status
+ occupation
+ employer_name
+Contact Information
+ primary_email
+ secondary_email
+ primary_phone
+ secondary_phone
+ preferred_contact_method
+ preferred_contact_time
+ language_preference
+Address Information
+ address_line_1
+ address_line_2
+ city
+ state_province
+ postal_code
+ country
+ address_type
+ is_primary_address
+Relationship Metadata
+ account_manager_id
+ client_segment
+ onboarding_date
+ offboarding_date
+ referral_source
+ relationship_start_date
+ relationship_end_date
+Compliance & Consent
+ kyc_status
+ kyc_completed_date
+ consent_marketing
+ consent_data_processing
+ consent_timestamp
+ privacy_policy_version_accepted
+Notes & Unstructured Data
+ internal_notes
+ client_tags (array)
+ last_interaction_summary
+Audit & System Fields
+ created_at
+ created_by
+ updated_at
+ updated_by
+ deleted_at
+ record_version
+
+
+
+

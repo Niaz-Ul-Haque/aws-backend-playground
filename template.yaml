@@ -1,75 +1,304 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Lambda Function URL with DynamoDB and SSM integration
+Description: Ciri AI Backend - Financial Advisor Assistant API
 
 Globals:
   Function:
-    Timeout: 60
+    Timeout: 30
     MemorySize: 256
     Runtime: nodejs20.x
     Architectures:
       - arm64
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref DataTable
+        LLM_API_KEY: !Sub '{{resolve:ssm:${AWS::StackName}-llmApiKey}}'
+
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,PATCH,DELETE,OPTIONS'"
+      AllowHeaders: "'Content-Type,Authorization,X-Requested-With'"
+      AllowOrigin: "'*'"
 
 Resources:
-  HelloFunction:
+  #############################################
+  # API Gateway
+  #############################################
+  CiriApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub '${AWS::StackName}-api'
+      StageName: prod
+      Description: Ciri AI Backend API
+      # Free tier: 1 million API calls per month for 12 months
+      EndpointConfiguration:
+        Type: REGIONAL
+
+  #############################################
+  # Lambda Functions
+  #############################################
+  
+  # Chat Handler - Main AI conversation endpoint
+  ChatFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: !Sub '${AWS::StackName}-chat'
       CodeUri: src/
-      Handler: dist/handler.handler
-      Environment:
-        Variables:
-          TABLE_NAME: !Ref RequestsTable
-          LLM_API_KEY: !Sub '{{resolve:ssm:${AWS::StackName}-llmApiKey}}'
+      Handler: dist/handlers/chat.handler
+      Timeout: 60
+      MemorySize: 512
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref RequestsTable
+            TableName: !Ref DataTable
         - Statement:
             Effect: Allow
             Action:
               - ssm:GetParameter
             Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}-llmApiKey'
-      FunctionUrlConfig:
-        AuthType: NONE
-        Cors:
-          AllowOrigins:
-            - '*'
-          AllowMethods:
-            - GET
-            - POST
-          AllowHeaders:
-            - '*'
+      Events:
+        ChatPost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/chat
+            Method: POST
+        ChatOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/chat
+            Method: OPTIONS
 
-  RequestsTable:
+  # Clients Handler - Client CRUD operations
+  ClientsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-clients'
+      CodeUri: src/
+      Handler: dist/handlers/clients.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DataTable
+      Events:
+        ClientsList:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/clients
+            Method: GET
+        ClientsGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/clients/{id}
+            Method: GET
+        ClientsOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/clients
+            Method: OPTIONS
+        ClientsIdOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/clients/{id}
+            Method: OPTIONS
+
+  # Policies Handler - Policy operations
+  PoliciesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-policies'
+      CodeUri: src/
+      Handler: dist/handlers/policies.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DataTable
+      Events:
+        PoliciesList:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/policies
+            Method: GET
+        PoliciesGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/policies/{id}
+            Method: GET
+        PoliciesOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/policies
+            Method: OPTIONS
+        PoliciesIdOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/policies/{id}
+            Method: OPTIONS
+
+  # Tasks Handler - Task CRUD and actions
+  TasksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-tasks'
+      CodeUri: src/
+      Handler: dist/handlers/tasks.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DataTable
+      Events:
+        TasksList:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/tasks
+            Method: GET
+        TasksGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/tasks/{id}
+            Method: GET
+        TasksUpdate:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/tasks/{id}
+            Method: PATCH
+        TasksApprove:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/tasks/{id}/approve
+            Method: POST
+        TasksReject:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/tasks/{id}/reject
+            Method: POST
+        TasksComplete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/tasks/{id}/complete
+            Method: POST
+        TasksOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/tasks
+            Method: OPTIONS
+        TasksIdOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/tasks/{id}
+            Method: OPTIONS
+        TasksActionOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/tasks/{id}/{action}
+            Method: OPTIONS
+
+  # Health Check Handler
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-health'
+      CodeUri: src/
+      Handler: dist/handlers/health.handler
+      MemorySize: 128
+      Timeout: 10
+      Events:
+        HealthGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/health
+            Method: GET
+
+  #############################################
+  # DynamoDB Table
+  #############################################
+  DataTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub '${AWS::StackName}-requests'
+      TableName: !Sub '${AWS::StackName}-data'
       AttributeDefinitions:
         - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
           AttributeType: S
       KeySchema:
         - AttributeName: pk
           KeyType: HASH
-      BillingMode: PROVISIONED
-      ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+      # Free tier: 25 GB storage, 25 WCU, 25 RCU always free
 
+  #############################################
+  # SSM Parameter for API Key
+  #############################################
   LlmApiKeyParam:
     Type: AWS::SSM::Parameter
     Properties:
       Name: !Sub '${AWS::StackName}-llmApiKey'
       Type: String
       Value: REPLACE_ME
-      Description: LLM API Key placeholder
+      Description: LLM API Key for Z.ai
 
+#############################################
+# Outputs
+#############################################
 Outputs:
-  FunctionUrl:
-    Description: Lambda Function URL
-    Value: !GetAtt HelloFunctionUrl.FunctionUrl
+  ApiUrl:
+    Description: API Gateway URL
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+
+  ChatEndpoint:
+    Description: Chat API Endpoint
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod/api/chat'
+
+  ClientsEndpoint:
+    Description: Clients API Endpoint
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod/api/clients'
+
+  PoliciesEndpoint:
+    Description: Policies API Endpoint
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod/api/policies'
+
+  TasksEndpoint:
+    Description: Tasks API Endpoint
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod/api/tasks'
+
+  HealthEndpoint:
+    Description: Health Check Endpoint
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/prod/api/health'
 
   TableName:
     Description: DynamoDB Table Name
-    Value: !Ref RequestsTable
+    Value: !Ref DataTable
 
   LlmApiKeyParamName:
     Description: SSM Parameter Name for LLM API Key
