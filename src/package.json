@@ -1,14 +1,19 @@
 {
-  "name": "lambda-function-url-handler",
-  "version": "1.0.0",
-  "description": "AWS Lambda Function URL handler with DynamoDB",
+  "name": "ciri-ai-backend",
+  "version": "2.0.0",
+  "description": "Ciri AI Assistant Backend - Multi-handler Lambda architecture",
   "type": "module",
-  "main": "dist/handler.js",
   "scripts": {
-    "build": "esbuild handler.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/handler.js --external:@aws-sdk/*",
+    "build": "npm run build:chat && npm run build:clients && npm run build:policies && npm run build:tasks && npm run build:health",
+    "build:chat": "esbuild handlers/chat.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/handlers/chat.js --external:@aws-sdk/*",
+    "build:clients": "esbuild handlers/clients.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/handlers/clients.js --external:@aws-sdk/*",
+    "build:policies": "esbuild handlers/policies.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/handlers/policies.js --external:@aws-sdk/*",
+    "build:tasks": "esbuild handlers/tasks.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/handlers/tasks.js --external:@aws-sdk/*",
+    "build:health": "esbuild handlers/health.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/handlers/health.js --external:@aws-sdk/*",
+    "clean": "rimraf dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["aws", "lambda", "dynamodb", "typescript"],
+  "keywords": ["aws", "lambda", "dynamodb", "typescript", "ai", "financial-advisor"],
   "author": "",
   "license": "MIT",
   "devDependencies": {
