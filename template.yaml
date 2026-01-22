@@ -29,7 +29,7 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       Name: !Sub '${AWS::StackName}-api'
-      StageName: Stage
+      StageName: !Ref AWS::StackName
       Description: Ciri AI Backend API
       # Free tier: 1 million API calls per month for 12 months
       EndpointConfiguration:
@@ -232,27 +232,27 @@ Resources:
 Outputs:
   ApiUrl:
     Description: API Gateway URL
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}'
 
   ChatEndpoint:
     Description: Chat API Endpoint
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/api/chat'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}/api/chat'
 
   ClientsEndpoint:
     Description: Clients API Endpoint
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/api/clients'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}/api/clients'
 
   PoliciesEndpoint:
     Description: Policies API Endpoint
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/api/policies'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}/api/policies'
 
   TasksEndpoint:
     Description: Tasks API Endpoint
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/api/tasks'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}/api/tasks'
 
   HealthEndpoint:
     Description: Health Check Endpoint
-    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/api/health'
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}/api/health'
 
   TableName:
     Description: DynamoDB Table Name
