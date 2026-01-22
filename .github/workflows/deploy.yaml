@@ -55,7 +55,8 @@ jobs:
             --resolve-s3 \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --capabilities CAPABILITY_IAM
+            --capabilities CAPABILITY_IAM \
+            --parameter-overrides LlmApiKey='${{ secrets.LLM_API_KEY }}'
 
       - name: Get stack outputs
         id: stack-outputs
@@ -86,7 +87,6 @@ jobs:
             --value "${{ secrets.LLM_API_KEY }}" \
             --type String \
             --overwrite
-
       - name: Install seed script dependencies
         working-directory: scripts
         run: npm ci || npm install

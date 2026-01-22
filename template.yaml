@@ -2,6 +2,13 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Ciri AI Backend - Financial Advisor Assistant API
 
+Parameters:
+  LlmApiKey:
+    Type: String
+    NoEcho: true
+    Default: REPLACE_ME
+    Description: LLM API key for Z.ai
+
 Globals:
   Function:
     Timeout: 30
@@ -12,7 +19,7 @@ Globals:
     Environment:
       Variables:
         TABLE_NAME: !Ref DataTable
-        LLM_API_KEY: !Sub '{{resolve:ssm:${AWS::StackName}-llmApiKey}}'
+        LLM_API_KEY: !Ref LlmApiKey
 
 Resources:
   #############################################
@@ -216,7 +223,7 @@ Resources:
     Properties:
       Name: !Sub '${AWS::StackName}-llmApiKey'
       Type: String
-      Value: REPLACE_ME
+      Value: !Ref LlmApiKey
       Description: LLM API Key for Z.ai
 
 #############################################
