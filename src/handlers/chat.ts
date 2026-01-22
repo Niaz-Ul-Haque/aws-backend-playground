@@ -7,8 +7,9 @@
  * Response: ChatResponse
  */
 
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import type { APIGatewayProxyResultV2 } from 'aws-lambda';
 import type { ChatRequest, ChatResponse, ChatContext, Card, ExtractedEntities } from '../types';
+import { getHttpMethod, getPath, type ApiGatewayEvent } from '../lib/utils/api-gateway';
 import {
   successResponse,
   errorResponse,
@@ -44,10 +45,10 @@ import {
  * Main chat handler
  */
 export async function handler(
-  event: APIGatewayProxyEventV2
+  event: ApiGatewayEvent
 ): Promise<APIGatewayProxyResultV2> {
-  const method = event.requestContext?.http?.method || 'UNKNOWN';
-  const path = event.requestContext?.http?.path || '/api/chat';
+  const method = getHttpMethod(event);
+  const path = getPath(event);
 
   console.log('=== Chat Handler Start ===');
   console.log('Method:', method);

@@ -9,8 +9,9 @@
  * POST /api/tasks/{id}/complete - Mark a task as complete
  */
 
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import type { APIGatewayProxyResultV2 } from 'aws-lambda';
 import type { TaskFilters, TaskUpdate } from '../types';
+import { getHttpMethod, getPath, type ApiGatewayEvent } from '../lib/utils/api-gateway';
 import {
   successResponse,
   errorResponse,
@@ -37,10 +38,10 @@ import {
  * Main tasks handler
  */
 export async function handler(
-  event: APIGatewayProxyEventV2
+  event: ApiGatewayEvent
 ): Promise<APIGatewayProxyResultV2> {
-  const method = event.requestContext?.http?.method || 'UNKNOWN';
-  const path = event.requestContext?.http?.path || '/api/tasks';
+  const method = getHttpMethod(event);
+  const path = getPath(event);
 
   console.log('=== Tasks Handler Start ===');
   console.log('Method:', method);
@@ -53,7 +54,8 @@ export async function handler(
   try {
     // Check for task ID in path
     const taskId = getRequiredPathParam(event.pathParameters, 'id');
-    const action = getRequiredPathParam(event.pathParameters, 'action');
+    const action =
+      getRequiredPathParam(event.pathParameters, 'action') || parseTaskActionFromPath(path);
     console.log('Task ID:', taskId, 'Action:', action);
 
     // Handle action endpoints
@@ -113,6 +115,23 @@ export async function handler(
       error instanceof Error ? error.message : 'Unknown error'
     );
   }
+}
+
+function parseTaskActionFromPath(path: string): string | null {
+  const cleanPath = path.split('?')[0];
+  const segments = cleanPath.split('/').filter(Boolean);
+  const action = segments[segments.length - 1];
+
+  if (action !== 'approve' && action !== 'reject' && action !== 'complete') {
+    return null;
+  }
+
+  const tasksIndex = segments.lastIndexOf('tasks');
+  if (tasksIndex === -1 || segments.length < tasksIndex + 3) {
+    return null;
+  }
+
+  return action;
 }
 
 /**

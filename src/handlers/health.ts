@@ -5,18 +5,19 @@
  * GET /api/health
  */
 
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import type { APIGatewayProxyResultV2 } from 'aws-lambda';
+import { getHttpMethod, getPath, type ApiGatewayEvent } from '../lib/utils/api-gateway';
 import { successResponse } from '../lib/utils/response';
 
 /**
  * Health check handler
  */
 export async function handler(
-  event: APIGatewayProxyEventV2
+  event: ApiGatewayEvent
 ): Promise<APIGatewayProxyResultV2> {
   console.log('=== Health Check Handler ===');
-  console.log('Method:', event.requestContext?.http?.method);
-  console.log('Path:', event.requestContext?.http?.path);
+  console.log('Method:', getHttpMethod(event));
+  console.log('Path:', getPath(event));
   
   const response = {
     status: 'healthy',
