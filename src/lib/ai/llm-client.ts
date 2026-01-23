@@ -36,6 +36,7 @@ interface LLMResponse {
 // Z.ai API configuration
 const Z_AI_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
 const DEFAULT_MODEL = 'glm-4.7-flashx';
+const DEFAULT_TIMEOUT_MS = 20000;
 
 /**
  * Get the API key from environment
@@ -46,6 +47,23 @@ function getApiKey(): string {
     throw new Error('LLM_API_KEY environment variable not set');
   }
   return apiKey;
+}
+
+function getApiUrl(): string {
+  return process.env.LLM_API_URL || Z_AI_API_URL;
+}
+
+function getModel(): string {
+  return process.env.LLM_MODEL || DEFAULT_MODEL;
+}
+
+function getTimeoutMs(): number {
+  const raw = process.env.LLM_TIMEOUT_MS;
+  if (!raw) {
+    return DEFAULT_TIMEOUT_MS;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_TIMEOUT_MS;
 }
 
 /**
@@ -69,7 +87,7 @@ export async function callLLM(
   messages.push({ role: 'user', content: userMessage });
 
   const requestBody: LLMRequest = {
-    model: DEFAULT_MODEL,
+    model: getModel(),
     messages,
     temperature: 0.7,
     max_tokens: 4000,
@@ -80,13 +98,14 @@ export async function callLLM(
 
   console.log('Calling LLM with messages:', messages.length);
 
-  const response = await fetch(Z_AI_API_URL, {
+  const response = await fetch(getApiUrl(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${getApiKey()}`,
     },
     body: JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(getTimeoutMs()),
   });
 
   if (!response.ok) {
@@ -118,7 +137,7 @@ export async function callLLMWithMessages(
   }
 ): Promise<string> {
   const requestBody: LLMRequest = {
-    model: DEFAULT_MODEL,
+    model: getModel(),
     messages,
     temperature: options?.temperature ?? 0.7,
     max_tokens: options?.maxTokens ?? 4000,
@@ -127,13 +146,14 @@ export async function callLLMWithMessages(
     },
   };
 
-  const response = await fetch(Z_AI_API_URL, {
+  const response = await fetch(getApiUrl(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${getApiKey()}`,
     },
     body: JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(getTimeoutMs()),
   });
 
   if (!response.ok) {

@@ -8,6 +8,18 @@ Parameters:
     NoEcho: true
     Default: REPLACE_ME
     Description: LLM API key for Z.ai
+  LlmApiUrl:
+    Type: String
+    Default: https://api.z.ai/api/paas/v4/chat/completions
+    Description: LLM API base URL
+  LlmModel:
+    Type: String
+    Default: glm-4.7-flashx
+    Description: LLM model name
+  LlmTimeoutMs:
+    Type: String
+    Default: '20000'
+    Description: LLM request timeout in milliseconds
 
 Globals:
   Function:
@@ -20,6 +32,9 @@ Globals:
       Variables:
         TABLE_NAME: !Ref DataTable
         LLM_API_KEY: !Ref LlmApiKey
+        LLM_API_URL: !Ref LlmApiUrl
+        LLM_MODEL: !Ref LlmModel
+        LLM_TIMEOUT_MS: !Ref LlmTimeoutMs
 
 Resources:
   #############################################
