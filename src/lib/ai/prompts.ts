@@ -72,7 +72,9 @@ Display a list of policies:
 
 ### review
 Display AI-completed work for approval:
-<<<CARD:review:{"task":{"task_id":"T001","title":"Draft email to client","status":"needs-review","ai_completed":true},"title":"Email Draft Ready","message":"I've drafted an email for your review.","generated_content":"Dear Mr. Smith,\\n\\nI hope this email finds you well..."}>>>
+<<<CARD:review:{"task_id":"T001","task":{"task_id":"T001","title":"Draft email to client","status":"needs-review","ai_completed":true},"title":"Email Draft Ready","message":"Dear Mr. Smith,\\n\\nI hope this email finds you well...\\n\\nBest regards,\\n[Your Name]","action_type":"email_draft","summary":"Follow-up email drafted for portfolio review discussion","confidence":88}>>>
+
+Supported action_type values: email_draft, meeting_notes, portfolio_review, policy_summary, client_summary, compliance_check, report, reminder, analysis, proposal, birthday_greeting, renewal_notice
 
 ### confirmation
 Display a confirmation message:
@@ -89,6 +91,7 @@ Display a confirmation message:
  * Intent-specific prompt additions
  */
 export const INTENT_PROMPTS: Record<string, string> = {
+  // Task intents
   show_todays_tasks: `The advisor wants to see their tasks for today. Present the tasks using a task-list card. Group by priority if there are many tasks. Mention any AI-completed tasks that need review.`,
 
   show_all_tasks: `The advisor wants to see all their tasks. Present them using a task-list card. You may want to organize them by status or priority.`,
@@ -97,22 +100,92 @@ export const INTENT_PROMPTS: Record<string, string> = {
 
   show_pending_reviews: `The advisor wants to see AI-completed work that needs their review. Show tasks with status "needs-review" using task cards with the review card format.`,
 
+  show_overdue_tasks: `The advisor wants to see overdue tasks. Present them using a task-list card with a title indicating these are overdue. Highlight the urgency.`,
+
+  show_high_priority_tasks: `The advisor wants to see urgent/high priority tasks. Present them using a task-list card. Emphasize which ones need immediate attention.`,
+
+  show_tasks_this_week: `The advisor wants to see tasks for this week. Present them using a task-list card organized by day or priority.`,
+
+  show_tasks_this_month: `The advisor wants to see tasks for this month. Present them using a task-list card. You may want to group by week or priority.`,
+
+  show_in_progress_tasks: `The advisor wants to see tasks currently in progress. Present them using a task-list card showing what they're actively working on.`,
+
+  show_completed_tasks: `The advisor wants to see completed tasks. Present them using a task-list card showing recent accomplishments.`,
+
   approve_task: `The advisor wants to approve an AI-completed task. Confirm the approval and show a confirmation card. Be encouraging about the work being finalized.`,
 
   reject_task: `The advisor wants to reject/revise an AI-completed task. Confirm the rejection and show a confirmation card. Ask if they want to provide feedback for improvement.`,
 
   complete_task: `The advisor wants to mark a task as complete. Confirm completion and show a confirmation card.`,
 
+  // Client intents
   show_client_info: `The advisor wants to see information about a client. Display the client details using a client card. You can also mention their policies if relevant.`,
 
   show_client_list: `The advisor wants to see their client list. Display clients using a client-list card.`,
 
   show_client_policies: `The advisor wants to see policies for a specific client. Display the policies using a policy-list card.`,
 
+  show_recent_clients: `The advisor wants to see recently added clients. Display them using a client-list card sorted by most recent first.`,
+
+  show_high_net_worth_clients: `The advisor wants to see their high net worth clients. Display them using a client-list card highlighting their portfolio values.`,
+
+  show_active_clients: `The advisor wants to see their active clients. Display them using a client-list card.`,
+
+  show_inactive_clients: `The advisor wants to see inactive or dormant clients. Display them using a client-list card and suggest re-engagement opportunities.`,
+
+  show_prospect_clients: `The advisor wants to see prospect clients. Display them using a client-list card and highlight potential opportunities.`,
+
+  search_clients: `The advisor is searching for clients. Display matching clients using a client-list card.`,
+
+  show_clients_by_portfolio: `The advisor wants to see clients filtered by portfolio value. Display them using a client-list card sorted by portfolio value.`,
+
+  // Policy intents
   show_policy_info: `The advisor wants to see details about a specific policy. Display the policy using a policy card.`,
 
   show_expiring_policies: `The advisor wants to see policies that are expiring soon. Display these using a policy-list card with a relevant title.`,
 
+  show_expiring_this_week: `The advisor wants to see policies expiring this week. These are urgent renewals. Display using a policy-list card and emphasize urgency.`,
+
+  show_expiring_this_month: `The advisor wants to see policies expiring this month. Display using a policy-list card with renewal dates highlighted.`,
+
+  show_policies_by_type: `The advisor wants to see policies of a specific type. Display them using a policy-list card filtered by the requested type.`,
+
+  show_policies_by_status: `The advisor wants to see policies filtered by status. Display them using a policy-list card.`,
+
+  show_overdue_policies: `The advisor wants to see policies with overdue payments. Display them using a policy-list card and highlight the payment status.`,
+
+  // Analytics/Dashboard intents
+  show_dashboard: `The advisor wants an overview of their work. Provide a summary with key metrics: tasks pending, clients active, policies expiring. Use text with relevant cards.`,
+
+  show_task_summary: `The advisor wants task metrics. Provide counts of tasks by status, overdue items, and tasks due today.`,
+
+  show_client_summary: `The advisor wants client metrics. Provide counts of clients by status, segment breakdown, and total portfolio value.`,
+
+  show_policy_summary: `The advisor wants policy metrics. Provide counts of policies by type, status, and expiring soon.`,
+
+  show_portfolio_summary: `The advisor wants portfolio/AUM summary. Provide total assets under management and average client value.`,
+
+  show_today_summary: `The advisor wants to know what's happening today. Summarize tasks due today, pending reviews, and any urgent matters.`,
+
+  show_week_summary: `The advisor wants a weekly overview. Summarize tasks for the week, completed work, and upcoming renewals.`,
+
+  // Communication intents
+  draft_email: `The advisor wants to draft an email. Create a professional email draft and present it using a review card for their approval.`,
+
+  draft_meeting_notes: `The advisor wants meeting notes drafted. Create comprehensive notes and present them using a review card.`,
+
+  draft_birthday_message: `The advisor wants to send birthday wishes. Draft a warm, professional birthday message and present it using a review card.`,
+
+  draft_renewal_notice: `The advisor wants to send a renewal notice. Draft a professional renewal reminder and present it using a review card.`,
+
+  // Search intents
+  global_search: `The advisor is searching across all data. Search tasks, clients, and policies and present relevant results.`,
+
+  search_tasks: `The advisor is searching for tasks. Display matching tasks using a task-list card.`,
+
+  search_policies: `The advisor is searching for policies. Display matching policies using a policy-list card.`,
+
+  // General intents
   general_question: `The advisor has a general question. Answer helpfully and offer to assist with related tasks if applicable.`,
 
   greeting: `The advisor is greeting you. Respond warmly and offer to help with their day. You might mention what tasks they have or any pending reviews.`,

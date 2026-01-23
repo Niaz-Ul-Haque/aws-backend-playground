@@ -198,3 +198,111 @@ export async function getClientsWithUpcomingMeetings(): Promise<Client[]> {
 export async function getHighNetWorthClients(): Promise<Client[]> {
   return getClients({ client_segment: 'High Net Worth' });
 }
+
+/**
+ * Get recent clients sorted by created_at (most recent first)
+ */
+export async function getRecentClients(limit?: number): Promise<Client[]> {
+  const clients = await getClients();
+  clients.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  return limit ? clients.slice(0, limit) : clients;
+}
+
+/**
+ * Get clients by status
+ */
+export async function getClientsByStatus(
+  status: 'Active' | 'Inactive' | 'Prospect' | 'Dormant'
+): Promise<Client[]> {
+  return getClients({ client_status: status });
+}
+
+/**
+ * Get clients by segment
+ */
+export async function getClientsBySegment(
+  segment: 'High Net Worth' | 'Mass Affluent' | 'Retail'
+): Promise<Client[]> {
+  return getClients({ client_segment: segment });
+}
+
+/**
+ * Get clients by portfolio value range
+ */
+export async function getClientsByPortfolioValue(
+  min?: number,
+  max?: number
+): Promise<Client[]> {
+  const clients = await getClients();
+  return clients.filter((c) => {
+    const value = c.portfolio_value || 0;
+    if (min !== undefined && value < min) return false;
+    if (max !== undefined && value > max) return false;
+    return true;
+  });
+}
+
+/**
+ * Search clients by name, email, or phone
+ */
+export async function searchClients(query: string): Promise<Client[]> {
+  const clients = await getClients();
+  const searchTerm = query.toLowerCase();
+
+  return clients.filter((c) =>
+    c.first_name.toLowerCase().includes(searchTerm) ||
+    c.last_name.toLowerCase().includes(searchTerm) ||
+    `${c.first_name} ${c.last_name}`.toLowerCase().includes(searchTerm) ||
+    (c.primary_email && c.primary_email.toLowerCase().includes(searchTerm)) ||
+    (c.primary_phone && c.primary_phone.includes(query)) ||
+    (c.secondary_email && c.secondary_email.toLowerCase().includes(searchTerm))
+  );
+}
+
+/**
+ * Get top clients by portfolio value
+ */
+export async function getTopClientsByPortfolio(limit?: number): Promise<Client[]> {
+  const clients = await getClients();
+  clients.sort((a, b) => (b.portfolio_value || 0) - (a.portfolio_value || 0));
+  return limit ? clients.slice(0, limit) : clients;
+}
+
+/**
+ * Get client counts grouped by status and segment
+ */
+export async function getClientCount(): Promise<{
+  total: number;
+  byStatus: Record<string, number>;
+  bySegment: Record<string, number>;
+}> {
+  const clients = await getClients();
+
+  const byStatus: Record<string, number> = {
+    Active: 0,
+    Inactive: 0,
+    Prospect: 0,
+    Dormant: 0,
+  };
+
+  const bySegment: Record<string, number> = {
+    'High Net Worth': 0,
+    'Mass Affluent': 0,
+    Retail: 0,
+  };
+
+  for (const client of clients) {
+    if (client.client_status) {
+      byStatus[client.client_status] = (byStatus[client.client_status] || 0) + 1;
+    }
+    if (client.client_segment) {
+      bySegment[client.client_segment] = (bySegment[client.client_segment] || 0) + 1;
+    }
+  }
+
+  return {
+    total: clients.length,
+    byStatus,
+    bySegment,
+  };
+}

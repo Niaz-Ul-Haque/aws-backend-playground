@@ -9,3 +9,7 @@ export * from './dynamodb';
 export * from './clients';
 export * from './policies';
 export * from './tasks';
+
+// Analytics and search
+export * from './analytics';
+export * from './search';

@@ -85,6 +85,18 @@ function isThisWeek(dateString: string): boolean {
 }
 
 /**
+ * Check if a date is within this month
+ */
+function isThisMonth(dateString: string): boolean {
+  const date = new Date(dateString);
+  const today = new Date();
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth()
+  );
+}
+
+/**
  * Check if a date is overdue
  */
 function isOverdue(dateString: string, status: TaskStatus): boolean {
@@ -319,4 +331,109 @@ export function isValidStatusTransition(
   };
 
   return validTransitions[from]?.includes(to) ?? false;
+}
+
+/**
+ * Get tasks due this week
+ */
+export async function getTasksThisWeek(): Promise<Task[]> {
+  return getTasks({ due_date: 'week' });
+}
+
+/**
+ * Get tasks due this month
+ */
+export async function getTasksThisMonth(): Promise<Task[]> {
+  const records = await scanByEntityType<TaskRecord>(ENTITY_TYPE);
+  let tasks = records.map(extractTask);
+  tasks = tasks.filter((t) => isThisMonth(t.due_date));
+  tasks.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+  return tasks;
+}
+
+/**
+ * Get tasks by priority level
+ */
+export async function getTasksByPriority(priority: 'high' | 'medium' | 'low'): Promise<Task[]> {
+  return getTasks({ priority });
+}
+
+/**
+ * Get tasks by status
+ */
+export async function getTasksByStatus(status: TaskStatus): Promise<Task[]> {
+  return getTasks({ status });
+}
+
+/**
+ * Get tasks that are in progress
+ */
+export async function getInProgressTasks(): Promise<Task[]> {
+  return getTasks({ status: 'in-progress' });
+}
+
+/**
+ * Get completed tasks with optional limit
+ */
+export async function getCompletedTasks(limit?: number): Promise<Task[]> {
+  const tasks = await getTasks({ status: 'completed' });
+  // Sort by completed_at descending (most recent first)
+  tasks.sort((a, b) => {
+    const aDate = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+    const bDate = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+    return bDate - aDate;
+  });
+  return limit ? tasks.slice(0, limit) : tasks;
+}
+
+/**
+ * Search tasks by keyword in title or description
+ */
+export async function searchTasks(query: string): Promise<Task[]> {
+  const records = await scanByEntityType<TaskRecord>(ENTITY_TYPE);
+  const tasks = records.map(extractTask);
+  const searchTerm = query.toLowerCase();
+
+  return tasks.filter((t) =>
+    t.title.toLowerCase().includes(searchTerm) ||
+    t.description.toLowerCase().includes(searchTerm) ||
+    t.tags.some((tag) => tag.toLowerCase().includes(searchTerm)) ||
+    (t.client_name && t.client_name.toLowerCase().includes(searchTerm))
+  );
+}
+
+/**
+ * Get task counts grouped by status and priority
+ */
+export async function getTaskCount(): Promise<{
+  total: number;
+  byStatus: Record<string, number>;
+  byPriority: Record<string, number>;
+}> {
+  const records = await scanByEntityType<TaskRecord>(ENTITY_TYPE);
+  const tasks = records.map(extractTask);
+
+  const byStatus: Record<string, number> = {
+    pending: 0,
+    'in-progress': 0,
+    completed: 0,
+    'needs-review': 0,
+  };
+
+  const byPriority: Record<string, number> = {
+    low: 0,
+    medium: 0,
+    high: 0,
+  };
+
+  for (const task of tasks) {
+    byStatus[task.status] = (byStatus[task.status] || 0) + 1;
+    byPriority[task.priority] = (byPriority[task.priority] || 0) + 1;
+  }
+
+  return {
+    total: tasks.length,
+    byStatus,
+    byPriority,
+  };
 }

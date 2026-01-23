@@ -215,3 +215,133 @@ export async function getTotalCoverageForClient(clientId: string): Promise<numbe
   });
   return policies.reduce((total, p) => total + p.coverage_amount, 0);
 }
+
+/**
+ * Get policies by type
+ */
+export async function getPoliciesByType(type: string): Promise<Policy[]> {
+  const policies = await getPolicies();
+  return policies.filter((p) => p.policy_type === type);
+}
+
+/**
+ * Get policies by status
+ */
+export async function getPoliciesByStatus(
+  status: 'Active' | 'Pending' | 'Expired' | 'Cancelled' | 'Lapsed'
+): Promise<Policy[]> {
+  return getPolicies({ policy_status: status });
+}
+
+/**
+ * Get policies expiring this week
+ */
+export async function getExpiringThisWeek(): Promise<Policy[]> {
+  const policies = await getPolicies();
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+  return policies.filter((p) => {
+    if (!p.renewal_date) return false;
+    const renewalDate = new Date(p.renewal_date);
+    return renewalDate >= now && renewalDate < endOfWeek;
+  });
+}
+
+/**
+ * Get policies expiring this month
+ */
+export async function getExpiringThisMonth(): Promise<Policy[]> {
+  const policies = await getPolicies();
+  const now = new Date();
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  return policies.filter((p) => {
+    if (!p.renewal_date) return false;
+    const renewalDate = new Date(p.renewal_date);
+    return renewalDate >= now && renewalDate <= endOfMonth;
+  });
+}
+
+/**
+ * Get policies by coverage amount range
+ */
+export async function getPoliciesByCoverage(
+  min?: number,
+  max?: number
+): Promise<Policy[]> {
+  const policies = await getPolicies();
+  return policies.filter((p) => {
+    if (min !== undefined && p.coverage_amount < min) return false;
+    if (max !== undefined && p.coverage_amount > max) return false;
+    return true;
+  });
+}
+
+/**
+ * Search policies by policy number, type, or status
+ */
+export async function searchPolicies(query: string): Promise<Policy[]> {
+  const policies = await getPolicies();
+  const searchTerm = query.toLowerCase();
+
+  return policies.filter((p) =>
+    p.policy_number.toLowerCase().includes(searchTerm) ||
+    p.policy_type.toLowerCase().includes(searchTerm) ||
+    p.policy_status.toLowerCase().includes(searchTerm) ||
+    (p.agent_notes && p.agent_notes.toLowerCase().includes(searchTerm)) ||
+    (p.tags && p.tags.some((tag) => tag.toLowerCase().includes(searchTerm)))
+  );
+}
+
+/**
+ * Get policy counts grouped by type and status
+ */
+export async function getPolicyCount(): Promise<{
+  total: number;
+  byType: Record<string, number>;
+  byStatus: Record<string, number>;
+}> {
+  const policies = await getPolicies();
+
+  const byType: Record<string, number> = {};
+  const byStatus: Record<string, number> = {
+    Active: 0,
+    Pending: 0,
+    Expired: 0,
+    Cancelled: 0,
+    Lapsed: 0,
+    Suspended: 0,
+  };
+
+  for (const policy of policies) {
+    byType[policy.policy_type] = (byType[policy.policy_type] || 0) + 1;
+    byStatus[policy.policy_status] = (byStatus[policy.policy_status] || 0) + 1;
+  }
+
+  return {
+    total: policies.length,
+    byType,
+    byStatus,
+  };
+}
+
+/**
+ * Get policies that need renewal action (expiring within 30 days and active)
+ */
+export async function getRenewalReminders(): Promise<Policy[]> {
+  const policies = await getPolicies();
+  const now = new Date();
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  return policies.filter((p) => {
+    if (p.policy_status !== 'Active') return false;
+    if (!p.renewal_date) return false;
+    const renewalDate = new Date(p.renewal_date);
+    return renewalDate >= now && renewalDate <= thirtyDaysFromNow;
+  });
+}

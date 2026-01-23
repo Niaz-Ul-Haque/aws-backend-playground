@@ -87,6 +87,58 @@ const INTENT_PATTERNS: IntentPattern[] = [
       /task\s*(?:is\s*)?(?:done|complete)/i,
     ],
   },
+  // Additional task intents
+  {
+    intent: 'show_overdue_tasks',
+    patterns: [
+      /overdue\s*tasks?/i,
+      /past\s*due\s*tasks?/i,
+      /late\s*tasks?/i,
+      /what'?s?\s*(?:past\s*due|overdue|late)/i,
+    ],
+  },
+  {
+    intent: 'show_high_priority_tasks',
+    patterns: [
+      /(?:high|urgent)\s*priority\s*tasks?/i,
+      /critical\s*tasks?/i,
+      /important\s*tasks?/i,
+      /urgent\s*(?:items?|things?|tasks?)/i,
+    ],
+  },
+  {
+    intent: 'show_tasks_this_week',
+    patterns: [
+      /tasks?\s*(?:for\s*)?this\s*week/i,
+      /this\s*week'?s?\s*tasks?/i,
+      /weekly\s*tasks?/i,
+    ],
+  },
+  {
+    intent: 'show_tasks_this_month',
+    patterns: [
+      /tasks?\s*(?:for\s*)?this\s*month/i,
+      /this\s*month'?s?\s*tasks?/i,
+      /monthly\s*tasks?/i,
+    ],
+  },
+  {
+    intent: 'show_in_progress_tasks',
+    patterns: [
+      /(?:tasks?\s*)?in\s*progress/i,
+      /what\s*am\s*i\s*working\s*on/i,
+      /current\s*tasks?/i,
+    ],
+  },
+  {
+    intent: 'show_completed_tasks',
+    patterns: [
+      /completed\s*tasks?/i,
+      /finished\s*tasks?/i,
+      /done\s*tasks?/i,
+      /what\s*(?:did\s*i|have\s*i)\s*(?:finish|complete)/i,
+    ],
+  },
   // Client-related intents
   {
     intent: 'show_client_info',
@@ -114,6 +166,61 @@ const INTENT_PATTERNS: IntentPattern[] = [
       /(?:his|her|their)\s*policies?/i,
     ],
   },
+  // Additional client intents
+  {
+    intent: 'show_recent_clients',
+    patterns: [
+      /recent\s*(?:clients?|customers?)/i,
+      /(?:new|latest)\s*(?:clients?|customers?)/i,
+      /(?:clients?|customers?)\s*(?:added|created)\s*recently/i,
+      /most\s*recent\s*(?:clients?|customers?)/i,
+    ],
+  },
+  {
+    intent: 'show_high_net_worth_clients',
+    patterns: [
+      /(?:high\s*net\s*worth|hnw|vip)\s*(?:clients?|customers?)/i,
+      /wealthy\s*(?:clients?|customers?)/i,
+      /top\s*(?:clients?|customers?)/i,
+    ],
+  },
+  {
+    intent: 'show_active_clients',
+    patterns: [
+      /active\s*(?:clients?|customers?)/i,
+      /(?:clients?|customers?)\s*i'?m?\s*working\s*with/i,
+    ],
+  },
+  {
+    intent: 'show_inactive_clients',
+    patterns: [
+      /inactive\s*(?:clients?|customers?)/i,
+      /dormant\s*(?:clients?|customers?)/i,
+    ],
+  },
+  {
+    intent: 'show_prospect_clients',
+    patterns: [
+      /prospect\s*(?:clients?|customers?)?/i,
+      /potential\s*(?:clients?|customers?)/i,
+      /leads?/i,
+    ],
+  },
+  {
+    intent: 'search_clients',
+    patterns: [
+      /(?:find|search|look\s*up)\s*(?:clients?|customers?)\s*(?:named|called)?\s*/i,
+      /(?:clients?|customers?)\s*(?:named|called)\s*/i,
+    ],
+  },
+  {
+    intent: 'show_clients_by_portfolio',
+    patterns: [
+      /clients?\s*with\s*portfolio\s*(?:over|above|greater)/i,
+      /largest\s*portfolios?/i,
+      /top\s*portfolios?/i,
+    ],
+  },
   // Policy-related intents
   {
     intent: 'show_policy_info',
@@ -129,6 +236,154 @@ const INTENT_PATTERNS: IntentPattern[] = [
       /(?:expiring|renewing)\s*(?:soon\s*)?policies?/i,
       /policies?\s*(?:that\s*)?(?:are\s*)?(?:expiring|due\s*for\s*renewal)/i,
       /upcoming\s*renewals?/i,
+    ],
+  },
+  // Additional policy intents
+  {
+    intent: 'show_expiring_this_week',
+    patterns: [
+      /(?:policies?|coverage)\s*expiring\s*this\s*week/i,
+      /urgent\s*renewals?/i,
+      /this\s*week'?s?\s*(?:expir|renewal)/i,
+    ],
+  },
+  {
+    intent: 'show_expiring_this_month',
+    patterns: [
+      /(?:policies?|coverage)\s*expiring\s*this\s*month/i,
+      /monthly\s*renewals?/i,
+      /renewals?\s*(?:due\s*)?this\s*month/i,
+    ],
+  },
+  {
+    intent: 'show_policies_by_type',
+    patterns: [
+      /(?:life|auto|home|health|critical\s*illness|disability)\s*(?:insurance\s*)?policies?/i,
+      /(?:rrsp|tfsa|segregated\s*fund)\s*(?:policies?|accounts?)?/i,
+      /show\s*(?:all\s*)?(?:life|auto|home)\s*(?:insurance)?/i,
+    ],
+  },
+  {
+    intent: 'show_policies_by_status',
+    patterns: [
+      /(?:active|pending|expired|cancelled|lapsed)\s*policies?/i,
+      /policies?\s*(?:that\s*are\s*)?(?:active|pending|expired)/i,
+    ],
+  },
+  {
+    intent: 'show_overdue_policies',
+    patterns: [
+      /overdue\s*(?:policies?|payments?)/i,
+      /(?:policies?\s*with\s*)?(?:overdue|late)\s*payments?/i,
+      /lapsed\s*policies?/i,
+    ],
+  },
+  // Analytics/Dashboard intents
+  {
+    intent: 'show_dashboard',
+    patterns: [
+      /(?:give\s*me\s*)?(?:an?\s*)?(?:overview|summary|dashboard)/i,
+      /what'?s?\s*(?:the\s*)?(?:status|situation)/i,
+      /how\s*(?:am\s*i|are\s*things)\s*doing/i,
+    ],
+  },
+  {
+    intent: 'show_task_summary',
+    patterns: [
+      /how\s*many\s*tasks?/i,
+      /task\s*(?:count|summary|breakdown)/i,
+      /tasks?\s*(?:overview|statistics|stats)/i,
+    ],
+  },
+  {
+    intent: 'show_client_summary',
+    patterns: [
+      /how\s*many\s*(?:clients?|customers?)/i,
+      /(?:client|customer)\s*(?:count|summary|breakdown)/i,
+      /(?:client|customer)\s*(?:overview|statistics|stats)/i,
+    ],
+  },
+  {
+    intent: 'show_policy_summary',
+    patterns: [
+      /how\s*many\s*policies?/i,
+      /policy\s*(?:count|summary|breakdown)/i,
+      /(?:insurance|coverage)\s*(?:overview|summary)/i,
+    ],
+  },
+  {
+    intent: 'show_portfolio_summary',
+    patterns: [
+      /portfolio\s*(?:overview|summary)/i,
+      /(?:aum|assets?\s*under\s*management)\s*(?:summary)?/i,
+      /total\s*assets?/i,
+      /what'?s?\s*my\s*(?:total\s*)?aum/i,
+    ],
+  },
+  {
+    intent: 'show_today_summary',
+    patterns: [
+      /what'?s?\s*(?:happening|going\s*on)\s*today/i,
+      /today'?s?\s*(?:overview|summary)/i,
+    ],
+  },
+  {
+    intent: 'show_week_summary',
+    patterns: [
+      /weekly\s*(?:summary|overview)/i,
+      /this\s*week'?s?\s*(?:overview|summary)/i,
+    ],
+  },
+  // Communication intents
+  {
+    intent: 'draft_email',
+    patterns: [
+      /(?:draft|write|compose|create)\s*(?:an?\s*)?email/i,
+      /email\s*(?:to|for)\s*/i,
+      /send\s*(?:an?\s*)?(?:email|message)\s*to/i,
+    ],
+  },
+  {
+    intent: 'draft_meeting_notes',
+    patterns: [
+      /(?:draft|write|create)\s*meeting\s*notes?/i,
+      /summarize\s*(?:the|our)\s*meeting/i,
+      /meeting\s*summary/i,
+    ],
+  },
+  {
+    intent: 'draft_birthday_message',
+    patterns: [
+      /birthday\s*(?:message|wish|greeting)\s*(?:for|to)?/i,
+      /(?:send|draft)\s*birthday\s*/i,
+    ],
+  },
+  {
+    intent: 'draft_renewal_notice',
+    patterns: [
+      /(?:draft|write|create)\s*renewal\s*(?:notice|reminder)/i,
+      /policy\s*(?:expiry|expiration)\s*(?:reminder|notice)/i,
+    ],
+  },
+  // Search intents
+  {
+    intent: 'global_search',
+    patterns: [
+      /^(?:search|find|look\s*(?:up|for))\s+(?!clients?|customers?|tasks?|policies?)/i,
+    ],
+  },
+  {
+    intent: 'search_tasks',
+    patterns: [
+      /(?:find|search)\s*tasks?\s*(?:about|for|with)/i,
+      /search\s*(?:for\s*)?tasks?/i,
+    ],
+  },
+  {
+    intent: 'search_policies',
+    patterns: [
+      /(?:find|search)\s*(?:for\s*)?polic(?:y|ies)/i,
+      /polic(?:y|ies)\s*(?:number|#)?\s*[A-Z0-9-]+/i,
     ],
   },
   // General intents
