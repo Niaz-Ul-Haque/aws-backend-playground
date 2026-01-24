@@ -33,8 +33,8 @@ interface LLMResponse {
   };
 }
 
-// Z.ai API configuration
-const Z_AI_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
+// Zhipu AI API configuration (using BigModel endpoint which is more reliable from AWS)
+const Z_AI_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 const DEFAULT_MODEL = 'glm-4.7-flashx';
 const DEFAULT_TIMEOUT_MS = 20000;
 

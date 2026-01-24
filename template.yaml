@@ -10,7 +10,7 @@ Parameters:
     Description: LLM API key for Z.ai
   LlmApiUrl:
     Type: String
-    Default: https://api.z.ai/api/paas/v4/chat/completions
+    Default: https://open.bigmodel.cn/api/paas/v4/chat/completions
     Description: LLM API base URL
   LlmModel:
     Type: String
