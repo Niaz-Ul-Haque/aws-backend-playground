@@ -53,6 +53,12 @@ export type UserIntent =
   | 'draft_meeting_notes'
   | 'draft_birthday_message'
   | 'draft_renewal_notice'
+  // Document generation intents
+  | 'create_compliance_check'
+  | 'create_portfolio_analysis'
+  | 'create_client_summary'
+  | 'create_meeting_prep'
+  | 'create_report'
   // Search intents
   | 'global_search'
   | 'search_tasks'

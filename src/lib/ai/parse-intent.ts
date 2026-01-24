@@ -365,6 +365,51 @@ const INTENT_PATTERNS: IntentPattern[] = [
       /policy\s*(?:expiry|expiration)\s*(?:reminder|notice)/i,
     ],
   },
+  // Document generation intents
+  {
+    intent: 'create_compliance_check',
+    patterns: [
+      /(?:create|generate|run|do|make|prepare)\s*(?:a\s*)?compliance\s*(?:check|report|review|audit)/i,
+      /compliance\s*(?:check|report|review|audit)/i,
+      /check\s*(?:his|her|their|the)?\s*compliance/i,
+      /kyc\s*(?:check|review|report)/i,
+      /suitability\s*(?:check|review|assessment)/i,
+    ],
+  },
+  {
+    intent: 'create_portfolio_analysis',
+    patterns: [
+      /(?:create|generate|do|make|prepare|show|give)\s*(?:a\s*)?(?:portfolio|investment)\s*(?:analysis|review|breakdown|summary)/i,
+      /(?:portfolio|investment)\s*(?:analysis|review|breakdown)/i,
+      /analyze\s*(?:his|her|their|the)?\s*portfolio/i,
+      /(?:detailed|full)\s*portfolio\s*/i,
+    ],
+  },
+  {
+    intent: 'create_client_summary',
+    patterns: [
+      /(?:create|generate|make|prepare)\s*(?:a\s*)?(?:client|customer)\s*(?:summary|overview|brief)/i,
+      /summarize\s*(?:the\s*)?(?:client|customer)/i,
+      /(?:client|customer)\s*(?:summary|overview|brief)/i,
+    ],
+  },
+  {
+    intent: 'create_meeting_prep',
+    patterns: [
+      /(?:prepare|create|generate|make)\s*(?:for\s*)?(?:the\s*)?meeting/i,
+      /meeting\s*(?:prep|preparation|materials?)/i,
+      /(?:get|make)\s*(?:me\s*)?ready\s*for\s*(?:the\s*)?meeting/i,
+      /(?:prepare|create)\s*(?:a\s*)?(?:meeting\s*)?agenda/i,
+    ],
+  },
+  {
+    intent: 'create_report',
+    patterns: [
+      /(?:create|generate|make|write|prepare|draft)\s*(?:a\s*)?(?:report|document|draft)/i,
+      /(?:prepare|create)\s*(?:a\s*)?draft\s*(?:based\s*on|from|using)/i,
+      /(?:generate|create)\s*(?:it|this|that)\s*(?:for\s*me)?/i,
+    ],
+  },
   // Search intents
   {
     intent: 'global_search',

@@ -344,6 +344,50 @@ async function gatherDataForIntent(
       break;
     }
 
+    // Document generation intents - use context from conversation
+    case 'create_compliance_check':
+    case 'create_portfolio_analysis':
+    case 'create_client_summary':
+    case 'create_meeting_prep':
+    case 'create_report': {
+      // First try to get client from entities or resolved context
+      const docClientName = entities.client_name as string;
+      const docClientId = resolvedContext?.client_id || context?.focused_client_id || (entities.client_id as string);
+
+      if (docClientName) {
+        const client = await getClientByName(docClientName);
+        if (client) {
+          dataForPrompt.focusedClient = client;
+          focusedClientId = client.client_id;
+          const policies = await getPoliciesForClient(client.client_id);
+          if (policies.length > 0) {
+            dataForPrompt.policies = policies;
+          }
+        }
+      } else if (docClientId) {
+        const client = await getClientById(docClientId);
+        if (client) {
+          dataForPrompt.focusedClient = client;
+          focusedClientId = client.client_id;
+          const policies = await getPoliciesForClient(client.client_id);
+          if (policies.length > 0) {
+            dataForPrompt.policies = policies;
+          }
+        }
+      }
+
+      // Also include focused task if relevant (for meeting prep)
+      const docTaskId = resolvedContext?.task_id || context?.focused_task_id;
+      if (docTaskId) {
+        const task = await getTaskById(docTaskId);
+        if (task) {
+          dataForPrompt.focusedTask = task;
+          focusedTaskId = docTaskId;
+        }
+      }
+      break;
+    }
+
     case 'greeting':
     case 'help': {
       // For greetings, show a summary of what's pending
