@@ -86,8 +86,13 @@ export async function callLLM(
   // Add the current user message
   messages.push({ role: 'user', content: userMessage });
 
+  const apiUrl = getApiUrl();
+  const model = getModel();
+  const timeoutMs = getTimeoutMs();
+  const apiKeyPreview = getApiKey().substring(0, 8) + '...';
+
   const requestBody: LLMRequest = {
-    model: getModel(),
+    model,
     messages,
     temperature: 0.7,
     max_tokens: 4000,
@@ -96,34 +101,102 @@ export async function callLLM(
     },
   };
 
-  console.log('Calling LLM with messages:', messages.length);
+  // Detailed pre-request logging
+  console.log('=== LLM Request Config ===');
+  console.log('API URL:', apiUrl);
+  console.log('Model:', model);
+  console.log('Timeout (ms):', timeoutMs);
+  console.log('API Key (preview):', apiKeyPreview);
+  console.log('Message count:', messages.length);
+  console.log('Request body size (bytes):', JSON.stringify(requestBody).length);
+  console.log('System prompt length:', systemPrompt.length);
+  console.log('User message length:', userMessage.length);
+  console.log('==========================');
 
-  const response = await fetch(getApiUrl(), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${getApiKey()}`,
-    },
-    body: JSON.stringify(requestBody),
-    signal: AbortSignal.timeout(getTimeoutMs()),
-  });
+  const startTime = Date.now();
+  console.log(`[${new Date().toISOString()}] Starting LLM API request...`);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('LLM API error:', response.status, errorText);
-    throw new Error(`LLM API error: ${response.status} - ${errorText}`);
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getApiKey()}`,
+      },
+      body: JSON.stringify(requestBody),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[${new Date().toISOString()}] LLM API response received`);
+    console.log('Response status:', response.status);
+    console.log('Response status text:', response.statusText);
+    console.log('Response elapsed time (ms):', elapsed);
+    console.log('Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('=== LLM API Error Response ===');
+      console.error('Status:', response.status);
+      console.error('Status text:', response.statusText);
+      console.error('Error body:', errorText);
+      console.error('==============================');
+      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json() as LLMResponse;
+    console.log('Response parsed successfully');
+    console.log('Choices count:', data.choices?.length ?? 0);
+    if (data.usage) {
+      console.log('Token usage:', JSON.stringify(data.usage));
+    }
+
+    if (!data.choices || data.choices.length === 0) {
+      console.error('No choices in LLM response:', JSON.stringify(data));
+      throw new Error('No response from LLM');
+    }
+
+    const content = data.choices[0].message.content;
+    console.log('LLM response content length:', content.length);
+    console.log('Finish reason:', data.choices[0].finish_reason);
+    console.log('Total request duration (ms):', Date.now() - startTime);
+
+    return content;
+  } catch (error: unknown) {
+    const elapsed = Date.now() - startTime;
+    console.error('=== LLM Request Failed ===');
+    console.error('Elapsed time before failure (ms):', elapsed);
+    console.error('Error type:', error?.constructor?.name);
+
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+
+      // Check for network-specific error details
+      const errorWithCause = error as Error & { cause?: Error & { code?: string } };
+      if (errorWithCause.cause) {
+        console.error('=== Error Cause Details ===');
+        console.error('Cause type:', errorWithCause.cause.constructor?.name);
+        console.error('Cause message:', errorWithCause.cause.message);
+        console.error('Cause code:', errorWithCause.cause.code);
+        if (errorWithCause.cause.stack) {
+          console.error('Cause stack:', errorWithCause.cause.stack);
+        }
+        console.error('===========================');
+      }
+
+      // Check for abort/timeout
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        console.error('Request was aborted/timed out');
+        console.error('Configured timeout was:', timeoutMs, 'ms');
+      }
+    }
+
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    console.error('==========================');
+
+    throw error;
   }
-
-   const data = await response.json() as LLMResponse;
-
-  if (!data.choices || data.choices.length === 0) {
-    throw new Error('No response from LLM');
-  }
-
-  const content = data.choices[0].message.content;
-  console.log('LLM response length:', content.length);
-
-  return content;
 }
 
 /**
@@ -136,8 +209,13 @@ export async function callLLMWithMessages(
     maxTokens?: number;
   }
 ): Promise<string> {
+  const apiUrl = getApiUrl();
+  const model = getModel();
+  const timeoutMs = getTimeoutMs();
+  const apiKeyPreview = getApiKey().substring(0, 8) + '...';
+
   const requestBody: LLMRequest = {
-    model: getModel(),
+    model,
     messages,
     temperature: options?.temperature ?? 0.7,
     max_tokens: options?.maxTokens ?? 4000,
@@ -146,26 +224,205 @@ export async function callLLMWithMessages(
     },
   };
 
-  const response = await fetch(getApiUrl(), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${getApiKey()}`,
-    },
-    body: JSON.stringify(requestBody),
-    signal: AbortSignal.timeout(getTimeoutMs()),
-  });
+  // Detailed pre-request logging
+  console.log('=== LLM Request Config (callLLMWithMessages) ===');
+  console.log('API URL:', apiUrl);
+  console.log('Model:', model);
+  console.log('Timeout (ms):', timeoutMs);
+  console.log('API Key (preview):', apiKeyPreview);
+  console.log('Message count:', messages.length);
+  console.log('Request body size (bytes):', JSON.stringify(requestBody).length);
+  console.log('================================================');
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`LLM API error: ${response.status} - ${errorText}`);
+  const startTime = Date.now();
+  console.log(`[${new Date().toISOString()}] Starting LLM API request (callLLMWithMessages)...`);
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getApiKey()}`,
+      },
+      body: JSON.stringify(requestBody),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[${new Date().toISOString()}] LLM API response received (callLLMWithMessages)`);
+    console.log('Response status:', response.status);
+    console.log('Response elapsed time (ms):', elapsed);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('=== LLM API Error Response ===');
+      console.error('Status:', response.status);
+      console.error('Error body:', errorText);
+      console.error('==============================');
+      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json() as LLMResponse;
+
+    if (!data.choices || data.choices.length === 0) {
+      console.error('No choices in LLM response:', JSON.stringify(data));
+      throw new Error('No response from LLM');
+    }
+
+    console.log('LLM response content length:', data.choices[0].message.content.length);
+    console.log('Total request duration (ms):', Date.now() - startTime);
+
+    return data.choices[0].message.content;
+  } catch (error: unknown) {
+    const elapsed = Date.now() - startTime;
+    console.error('=== LLM Request Failed (callLLMWithMessages) ===');
+    console.error('Elapsed time before failure (ms):', elapsed);
+    console.error('Error type:', error?.constructor?.name);
+
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+
+      const errorWithCause = error as Error & { cause?: Error & { code?: string } };
+      if (errorWithCause.cause) {
+        console.error('=== Error Cause Details ===');
+        console.error('Cause type:', errorWithCause.cause.constructor?.name);
+        console.error('Cause message:', errorWithCause.cause.message);
+        console.error('Cause code:', errorWithCause.cause.code);
+        console.error('===========================');
+      }
+    }
+
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    console.error('===============================================');
+
+    throw error;
+  }
+}
+
+/**
+ * Diagnostic function to test LLM API connectivity
+ * Returns detailed information about the connection attempt
+ */
+export async function testLLMConnectivity(): Promise<{
+  success: boolean;
+  config: {
+    apiUrl: string;
+    model: string;
+    timeoutMs: number;
+    hasApiKey: boolean;
+  };
+  timing: {
+    startTime: string;
+    endTime: string;
+    durationMs: number;
+  };
+  result?: {
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+  };
+  error?: {
+    type: string;
+    message: string;
+    code?: string;
+    cause?: {
+      type: string;
+      message: string;
+      code?: string;
+    };
+  };
+}> {
+  const apiUrl = getApiUrl();
+  const model = getModel();
+  const timeoutMs = getTimeoutMs();
+  let hasApiKey = false;
+
+  try {
+    getApiKey();
+    hasApiKey = true;
+  } catch {
+    hasApiKey = false;
   }
 
-  const data = await response.json() as LLMResponse;
+  const config = { apiUrl, model, timeoutMs, hasApiKey };
+  const startTime = new Date().toISOString();
+  const startMs = Date.now();
 
-  if (!data.choices || data.choices.length === 0) {
-    throw new Error('No response from LLM');
+  console.log('=== LLM Connectivity Test ===');
+  console.log('Config:', JSON.stringify(config));
+  console.log('Start time:', startTime);
+
+  try {
+    // Simple test request with minimal payload
+    const testBody = {
+      model,
+      messages: [{ role: 'user', content: 'test' }],
+      max_tokens: 1,
+    };
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${hasApiKey ? getApiKey() : 'test-key'}`,
+      },
+      body: JSON.stringify(testBody),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    const endTime = new Date().toISOString();
+    const durationMs = Date.now() - startMs;
+
+    console.log('Connection successful!');
+    console.log('Status:', response.status);
+    console.log('Duration (ms):', durationMs);
+
+    return {
+      success: true,
+      config,
+      timing: { startTime, endTime, durationMs },
+      result: {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+      },
+    };
+  } catch (error: unknown) {
+    const endTime = new Date().toISOString();
+    const durationMs = Date.now() - startMs;
+
+    console.error('Connection failed!');
+    console.error('Duration before failure (ms):', durationMs);
+
+    const errorInfo: {
+      type: string;
+      message: string;
+      code?: string;
+      cause?: { type: string; message: string; code?: string };
+    } = {
+      type: error?.constructor?.name || 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+    };
+
+    if (error instanceof Error) {
+      const errorWithCause = error as Error & { cause?: Error & { code?: string } };
+      if (errorWithCause.cause) {
+        errorInfo.cause = {
+          type: errorWithCause.cause.constructor?.name || 'Unknown',
+          message: errorWithCause.cause.message,
+          code: errorWithCause.cause.code,
+        };
+      }
+    }
+
+    console.error('Error info:', JSON.stringify(errorInfo));
+
+    return {
+      success: false,
+      config,
+      timing: { startTime, endTime, durationMs },
+      error: errorInfo,
+    };
   }
-
-  return data.choices[0].message.content;
 }
