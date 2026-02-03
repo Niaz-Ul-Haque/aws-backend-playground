@@ -3,6 +3,8 @@
  * Handles communication with the Z.ai API
  */
 
+import { Agent } from 'undici';
+
 interface LLMMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -34,6 +36,47 @@ interface LLMResponse {
 const Z_AI_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 const DEFAULT_MODEL = 'glm-4.7-flashx';
 const DEFAULT_TIMEOUT_MS = 45000;
+const CONNECT_TIMEOUT_MS = 30_000; // undici default is 10s, too short for cross-region
+const MAX_RETRIES = 1;
+
+// Custom agent with higher connect timeout for cross-region API calls
+const llmAgent = new Agent({
+  connect: { timeout: CONNECT_TIMEOUT_MS },
+});
+
+/** Check if the error is a TCP connect timeout */
+function isConnectError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const cause = (error as Error & { cause?: Error & { code?: string } }).cause;
+    return cause?.code === 'UND_ERR_CONNECT_TIMEOUT' || false;
+  }
+  return false;
+}
+
+/** Fetch with custom connect timeout + retry on connection errors */
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  retries = MAX_RETRIES,
+): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetch(url, {
+        ...init,
+        // @ts-expect-error undici dispatcher option not in standard RequestInit
+        dispatcher: llmAgent,
+      });
+    } catch (error) {
+      if (attempt < retries && isConnectError(error)) {
+        const delay = 2000 * (attempt + 1);
+        console.warn(`LLM connect attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
 
 /**
  * Get the API key from environment
@@ -112,7 +155,7 @@ export async function callLLM(
   console.log(`[${new Date().toISOString()}] Starting LLM API request...`);
 
   try {
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithRetry(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -230,7 +273,7 @@ export async function callLLMWithMessages(
   console.log(`[${new Date().toISOString()}] Starting LLM API request (callLLMWithMessages)...`);
 
   try {
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithRetry(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -353,7 +396,7 @@ export async function testLLMConnectivity(): Promise<{
       max_tokens: 1,
     };
 
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithRetry(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
