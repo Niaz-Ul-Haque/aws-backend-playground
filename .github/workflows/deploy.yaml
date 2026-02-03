@@ -58,7 +58,7 @@ jobs:
             --capabilities CAPABILITY_IAM \
             --parameter-overrides \
               LlmApiKey='${{ secrets.LLM_API_KEY }}' \
-              LlmApiUrl='https://open.bigmodel.cn/api/paas/v4/chat/completions' \
+              LlmApiUrl='https://api.z.ai/api/paas/v4/chat/completions' \
               LlmTimeoutMs='45000'
 
       - name: Get stack outputs

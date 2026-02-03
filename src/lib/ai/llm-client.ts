@@ -3,8 +3,6 @@
  * Handles communication with the Z.ai API
  */
 
-import { Agent } from 'undici';
-
 interface LLMMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -32,44 +30,51 @@ interface LLMResponse {
   };
 }
 
-// Zhipu AI API configuration (using BigModel endpoint which is more reliable from AWS)
-const Z_AI_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+// Zhipu AI API configuration (official international endpoint per docs.z.ai)
+const Z_AI_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
 const DEFAULT_MODEL = 'glm-4.7-flashx';
 const DEFAULT_TIMEOUT_MS = 45000;
-const CONNECT_TIMEOUT_MS = 30_000; // undici default is 10s, too short for cross-region
-const MAX_RETRIES = 1;
+const MAX_RETRIES = 2;
 
-// Custom agent with higher connect timeout for cross-region API calls
-const llmAgent = new Agent({
-  connect: { timeout: CONNECT_TIMEOUT_MS },
-});
-
-/** Check if the error is a TCP connect timeout */
-function isConnectError(error: unknown): boolean {
+/** Check if the error is a network/connection error worth retrying */
+function isRetryableError(error: unknown): boolean {
   if (error instanceof Error) {
     const cause = (error as Error & { cause?: Error & { code?: string } }).cause;
-    return cause?.code === 'UND_ERR_CONNECT_TIMEOUT' || false;
+    if (cause?.code === 'UND_ERR_CONNECT_TIMEOUT') return true;
+    if (cause?.code === 'UND_ERR_SOCKET') return true;
+    if (cause?.code === 'ECONNRESET') return true;
+    if (cause?.code === 'ECONNREFUSED') return true;
+    // "fetch failed" with no specific cause is also retryable
+    if (error.message === 'fetch failed' && cause) return true;
   }
   return false;
 }
 
-/** Fetch with custom connect timeout + retry on connection errors */
+/**
+ * Fetch with retry on connection errors.
+ * Each retry gets its own AbortSignal.timeout so the full timeout budget
+ * applies per attempt (not shared across retries).
+ */
 async function fetchWithRetry(
   url: string,
-  init: RequestInit,
+  init: Omit<RequestInit, 'signal'>,
+  timeoutMs: number,
   retries = MAX_RETRIES,
 ): Promise<Response> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await fetch(url, {
         ...init,
-        // @ts-expect-error undici dispatcher option not in standard RequestInit
-        dispatcher: llmAgent,
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
-      if (attempt < retries && isConnectError(error)) {
+      if (attempt < retries && isRetryableError(error)) {
         const delay = 2000 * (attempt + 1);
-        console.warn(`LLM connect attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        console.warn(
+          `LLM fetch attempt ${attempt + 1}/${retries + 1} failed (${
+            (error as Error).cause ? ((error as Error & { cause: Error }).cause.message) : (error as Error).message
+          }), retrying in ${delay}ms...`
+        );
         await new Promise(r => setTimeout(r, delay));
         continue;
       }
@@ -162,8 +167,7 @@ export async function callLLM(
         Authorization: `Bearer ${getApiKey()}`,
       },
       body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    }, timeoutMs);
 
     const elapsed = Date.now() - startTime;
     console.log(`[${new Date().toISOString()}] LLM API response received`);
@@ -280,8 +284,7 @@ export async function callLLMWithMessages(
         Authorization: `Bearer ${getApiKey()}`,
       },
       body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    }, timeoutMs);
 
     const elapsed = Date.now() - startTime;
     console.log(`[${new Date().toISOString()}] LLM API response received (callLLMWithMessages)`);
@@ -403,8 +406,7 @@ export async function testLLMConnectivity(): Promise<{
         Authorization: `Bearer ${hasApiKey ? getApiKey() : 'test-key'}`,
       },
       body: JSON.stringify(testBody),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    }, timeoutMs);
 
     const endTime = new Date().toISOString();
     const durationMs = Date.now() - startMs;
