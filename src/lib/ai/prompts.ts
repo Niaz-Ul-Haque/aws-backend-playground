@@ -64,52 +64,22 @@ Remember: You're here to GET THINGS DONE, not to ask questions about getting thi
  */
 export const CARD_EMBEDDING_INSTRUCTIONS = `
 ## Card Embedding Format
-When displaying structured data, embed cards using this exact format:
+Embed cards on their own line: <<<CARD:card-type:{json}>>>
 
-<<<CARD:card-type:{"key":"value"}>>>
+Card types (include all relevant fields from the data provided):
+- **task-list**: {"title":"...","tasks":[{task_id,title,status,due_date,priority,client_name,ai_completed}],"show_actions":true}
+- **task**: {"task":{task_id,title,description,status,due_date,priority,client_id,client_name,tags,ai_completed},"show_actions":true}
+- **client**: {"client":{client_id,first_name,last_name,primary_email,client_status,client_segment,portfolio_value,risk_profile},"show_policies":true}
+- **client-list**: {"title":"...","clients":[{client_id,first_name,last_name,primary_email,client_status,portfolio_value}]}
+- **policy**: {"policy":{policy_id,client_id,policy_number,policy_type,policy_status,coverage_amount,premium_amount,premium_frequency},"show_claims":false}
+- **policy-list**: {"title":"...","policies":[{policy fields}],"client_name":"..."}
+- **review**: {"task_id":"...","task":{task_id,title,status,ai_completed},"title":"...","message":"...","action_type":"...","summary":"...","confidence":0-100}
+  action_type values: email_draft, meeting_notes, portfolio_review, policy_summary, client_summary, compliance_check, report, reminder, analysis, proposal, birthday_greeting, renewal_notice
+- **confirmation**: {"type":"success","message":"...","details":"..."}
 
-Available card types and their data structures:
+Example: <<<CARD:task-list:{"title":"Today's Tasks","tasks":[{"task_id":"T001","title":"Review portfolio","status":"pending","due_date":"2026-01-21T10:00:00Z","priority":"high","client_name":"John Smith","ai_completed":false}],"show_actions":true}>>>
 
-### task-list
-Display a list of tasks:
-<<<CARD:task-list:{"title":"Today's Tasks","tasks":[{"task_id":"T001","title":"Review portfolio","status":"pending","due_date":"2026-01-21T10:00:00Z","priority":"high","client_name":"John Smith","ai_completed":false}],"show_actions":true}>>>
-
-### task
-Display a single task with details:
-<<<CARD:task:{"task":{"task_id":"T001","title":"Review portfolio","description":"Annual review","status":"pending","due_date":"2026-01-21T10:00:00Z","priority":"high","client_id":"C001","client_name":"John Smith","tags":["review"],"ai_completed":false,"created_at":"2026-01-20T09:00:00Z","updated_at":"2026-01-20T09:00:00Z"},"show_actions":true}>>>
-
-### client
-Display client information:
-<<<CARD:client:{"client":{"client_id":"C001","first_name":"John","last_name":"Smith","primary_email":"john@email.com","client_status":"Active","client_segment":"High Net Worth","portfolio_value":1250000,"risk_profile":"moderate"},"show_policies":true}>>>
-
-### client-list
-Display a list of clients:
-<<<CARD:client-list:{"title":"Your Clients","clients":[{"client_id":"C001","first_name":"John","last_name":"Smith","primary_email":"john@email.com","client_status":"Active","portfolio_value":1250000}]}>>>
-
-### policy
-Display policy information:
-<<<CARD:policy:{"policy":{"policy_id":"POL001","client_id":"C001","policy_number":"LI-2024-001","policy_type":"Life Insurance","policy_status":"Active","coverage_amount":500000,"premium_amount":250,"premium_frequency":"Monthly"},"show_claims":false}>>>
-
-### policy-list
-Display a list of policies:
-<<<CARD:policy-list:{"title":"Client Policies","policies":[{"policy_id":"POL001","client_id":"C001","policy_number":"LI-2024-001","policy_type":"Life Insurance","policy_status":"Active","coverage_amount":500000,"premium_amount":250,"premium_frequency":"Monthly"}],"client_name":"John Smith"}>>>
-
-### review
-Display AI-completed work for approval:
-<<<CARD:review:{"task_id":"T001","task":{"task_id":"T001","title":"Draft email to client","status":"needs-review","ai_completed":true},"title":"Email Draft Ready","message":"Dear Mr. Smith,\\n\\nI hope this email finds you well...\\n\\nBest regards,\\n[Your Name]","action_type":"email_draft","summary":"Follow-up email drafted for portfolio review discussion","confidence":88}>>>
-
-Supported action_type values: email_draft, meeting_notes, portfolio_review, policy_summary, client_summary, compliance_check, report, reminder, analysis, proposal, birthday_greeting, renewal_notice
-
-### confirmation
-Display a confirmation message:
-<<<CARD:confirmation:{"type":"success","message":"Task marked as complete","details":"The portfolio review has been approved and sent to the client."}>>>
-
-## Rules for Card Embedding
-1. Cards must be on their own line
-2. JSON must be valid and properly escaped
-3. You can include multiple cards in a response
-4. Mix cards with regular text for context
-5. Use cards when displaying data, plain text for conversation`;
+Rules: Cards on own line, valid JSON, mix with text for context.`;
 
 /**
  * Intent-specific prompt additions
@@ -272,6 +242,29 @@ export function buildPromptWithIntent(
 /**
  * Format data context for the LLM
  */
+/** Fields that are internal DB keys and don't help the LLM generate responses */
+const STRIP_FIELDS = new Set([
+  'pk', 'sk', 'GSI1PK', 'GSI1SK', 'entity_type', 'created_at', 'updated_at',
+]);
+
+/**
+ * Recursively strip internal DB fields from an object before sending to LLM
+ */
+function stripInternalFields(obj: unknown): unknown {
+  if (Array.isArray(obj)) {
+    return obj.map(stripInternalFields);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      if (STRIP_FIELDS.has(key)) continue;
+      cleaned[key] = value;
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
 export function formatDataContext(data: {
   tasks?: unknown[];
   clients?: unknown[];
@@ -283,22 +276,22 @@ export function formatDataContext(data: {
   const parts: string[] = [];
 
   if (data.focusedTask) {
-    parts.push(`Focused Task:\n${JSON.stringify(data.focusedTask, null, 2)}`);
+    parts.push(`Focused Task:\n${JSON.stringify(stripInternalFields(data.focusedTask))}`);
   }
   if (data.focusedClient) {
-    parts.push(`Focused Client:\n${JSON.stringify(data.focusedClient, null, 2)}`);
+    parts.push(`Focused Client:\n${JSON.stringify(stripInternalFields(data.focusedClient))}`);
   }
   if (data.focusedPolicy) {
-    parts.push(`Focused Policy:\n${JSON.stringify(data.focusedPolicy, null, 2)}`);
+    parts.push(`Focused Policy:\n${JSON.stringify(stripInternalFields(data.focusedPolicy))}`);
   }
   if (data.tasks && data.tasks.length > 0) {
-    parts.push(`Tasks (${data.tasks.length} total):\n${JSON.stringify(data.tasks, null, 2)}`);
+    parts.push(`Tasks (${data.tasks.length}):\n${JSON.stringify(stripInternalFields(data.tasks))}`);
   }
   if (data.clients && data.clients.length > 0) {
-    parts.push(`Clients (${data.clients.length} total):\n${JSON.stringify(data.clients, null, 2)}`);
+    parts.push(`Clients (${data.clients.length}):\n${JSON.stringify(stripInternalFields(data.clients))}`);
   }
   if (data.policies && data.policies.length > 0) {
-    parts.push(`Policies (${data.policies.length} total):\n${JSON.stringify(data.policies, null, 2)}`);
+    parts.push(`Policies (${data.policies.length}):\n${JSON.stringify(stripInternalFields(data.policies))}`);
   }
 
   return parts.join('\n\n');

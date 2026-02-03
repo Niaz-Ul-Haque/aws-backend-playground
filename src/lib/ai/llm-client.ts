@@ -13,9 +13,6 @@ interface LLMRequest {
   messages: LLMMessage[];
   temperature?: number;
   max_tokens?: number;
-  thinking?: {
-    type: 'enabled' | 'disabled';
-  };
 }
 
 interface LLMResponse {
@@ -36,7 +33,7 @@ interface LLMResponse {
 // Zhipu AI API configuration (using BigModel endpoint which is more reliable from AWS)
 const Z_AI_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 const DEFAULT_MODEL = 'glm-4.7-flashx';
-const DEFAULT_TIMEOUT_MS = 20000;
+const DEFAULT_TIMEOUT_MS = 45000;
 
 /**
  * Get the API key from environment
@@ -72,7 +69,8 @@ function getTimeoutMs(): number {
 export async function callLLM(
   systemPrompt: string,
   userMessage: string,
-  conversationHistory?: LLMMessage[]
+  conversationHistory?: LLMMessage[],
+  options?: { maxTokens?: number }
 ): Promise<string> {
   const messages: LLMMessage[] = [
     { role: 'system', content: systemPrompt },
@@ -95,10 +93,7 @@ export async function callLLM(
     model,
     messages,
     temperature: 0.7,
-    max_tokens: 4000,
-    thinking: {
-      type: 'disabled',
-    },
+    max_tokens: options?.maxTokens ?? 4000,
   };
 
   // Detailed pre-request logging
@@ -219,9 +214,6 @@ export async function callLLMWithMessages(
     messages,
     temperature: options?.temperature ?? 0.7,
     max_tokens: options?.maxTokens ?? 4000,
-    thinking: {
-      type: 'disabled',
-    },
   };
 
   // Detailed pre-request logging

@@ -18,7 +18,7 @@ Parameters:
     Description: LLM model name
   LlmTimeoutMs:
     Type: String
-    Default: '20000'
+    Default: '45000'
     Description: LLM request timeout in milliseconds
 
 Globals:

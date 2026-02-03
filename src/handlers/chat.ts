@@ -41,6 +41,74 @@ import {
   getPolicyById,
 } from '../lib/db';
 
+/** Return an appropriate max_tokens budget for the given intent */
+function maxTokensForIntent(intent: string): number {
+  switch (intent) {
+    // Simple / short responses
+    case 'greeting':
+    case 'help':
+    case 'approve_task':
+    case 'reject_task':
+    case 'complete_task':
+      return 800;
+
+    // Listing / display intents
+    case 'show_todays_tasks':
+    case 'show_all_tasks':
+    case 'show_pending_reviews':
+    case 'show_task_status':
+    case 'show_overdue_tasks':
+    case 'show_high_priority_tasks':
+    case 'show_tasks_this_week':
+    case 'show_tasks_this_month':
+    case 'show_in_progress_tasks':
+    case 'show_completed_tasks':
+    case 'show_client_info':
+    case 'show_client_list':
+    case 'show_client_policies':
+    case 'show_recent_clients':
+    case 'show_high_net_worth_clients':
+    case 'show_active_clients':
+    case 'show_inactive_clients':
+    case 'show_prospect_clients':
+    case 'search_clients':
+    case 'show_clients_by_portfolio':
+    case 'show_policy_info':
+    case 'show_expiring_policies':
+    case 'show_expiring_this_week':
+    case 'show_expiring_this_month':
+    case 'show_policies_by_type':
+    case 'show_policies_by_status':
+    case 'show_overdue_policies':
+    case 'show_dashboard':
+    case 'show_task_summary':
+    case 'show_client_summary':
+    case 'show_policy_summary':
+    case 'show_portfolio_summary':
+    case 'show_today_summary':
+    case 'show_week_summary':
+    case 'global_search':
+    case 'search_tasks':
+    case 'search_policies':
+      return 2000;
+
+    // Document generation intents (need full output budget)
+    case 'create_compliance_check':
+    case 'create_portfolio_analysis':
+    case 'create_client_summary':
+    case 'create_meeting_prep':
+    case 'create_report':
+    case 'draft_email':
+    case 'draft_meeting_notes':
+    case 'draft_birthday_message':
+    case 'draft_renewal_notice':
+      return 4000;
+
+    default:
+      return 2000;
+  }
+}
+
 /**
  * Main chat handler
  */
@@ -160,10 +228,13 @@ async function processChat(
   console.log('Prompts built, system prompt length:', systemPrompt.length);
 
   // Step 6: Call the LLM
-  console.log('Step 6: Calling LLM...');
+  const maxTokens = maxTokensForIntent(intentResult.intent);
+  console.log('Step 6: Calling LLM... (maxTokens:', maxTokens, ')');
   const llmResponse = await callLLM(
     systemPrompt + intentPrompt,
-    message
+    message,
+    undefined,
+    { maxTokens }
   );
   console.log('LLM response received, length:', llmResponse.length);
 
@@ -279,18 +350,20 @@ async function gatherDataForIntent(
         if (client) {
           dataForPrompt.focusedClient = client;
           focusedClientId = client.client_id;
-          // Also get their policies
           const policies = await getPoliciesForClient(client.client_id);
           if (policies.length > 0) {
             dataForPrompt.policies = policies;
           }
         }
       } else if (clientId) {
-        const client = await getClientById(clientId);
+        // Parallelize: fetch client and policies at the same time
+        const [client, policies] = await Promise.all([
+          getClientById(clientId),
+          getPoliciesForClient(clientId),
+        ]);
         if (client) {
           dataForPrompt.focusedClient = client;
           focusedClientId = client.client_id;
-          const policies = await getPoliciesForClient(client.client_id);
           if (policies.length > 0) {
             dataForPrompt.policies = policies;
           }
@@ -350,49 +423,66 @@ async function gatherDataForIntent(
     case 'create_client_summary':
     case 'create_meeting_prep':
     case 'create_report': {
-      // First try to get client from entities or resolved context
       const docClientName = entities.client_name as string;
       const docClientId = resolvedContext?.client_id || context?.focused_client_id || (entities.client_id as string);
+      const docTaskId = resolvedContext?.task_id || context?.focused_task_id;
+
+      // Build an array of parallel fetches
+      const docPromises: Promise<void>[] = [];
 
       if (docClientName) {
-        const client = await getClientByName(docClientName);
-        if (client) {
-          dataForPrompt.focusedClient = client;
-          focusedClientId = client.client_id;
-          const policies = await getPoliciesForClient(client.client_id);
-          if (policies.length > 0) {
-            dataForPrompt.policies = policies;
-          }
-        }
+        docPromises.push(
+          getClientByName(docClientName).then(async (client) => {
+            if (client) {
+              dataForPrompt.focusedClient = client;
+              focusedClientId = client.client_id;
+              const policies = await getPoliciesForClient(client.client_id);
+              if (policies.length > 0) {
+                dataForPrompt.policies = policies;
+              }
+            }
+          })
+        );
       } else if (docClientId) {
-        const client = await getClientById(docClientId);
-        if (client) {
-          dataForPrompt.focusedClient = client;
-          focusedClientId = client.client_id;
-          const policies = await getPoliciesForClient(client.client_id);
-          if (policies.length > 0) {
-            dataForPrompt.policies = policies;
-          }
-        }
+        // Parallelize client + policies when we already have the ID
+        docPromises.push(
+          Promise.all([
+            getClientById(docClientId),
+            getPoliciesForClient(docClientId),
+          ]).then(([client, policies]) => {
+            if (client) {
+              dataForPrompt.focusedClient = client;
+              focusedClientId = client.client_id;
+              if (policies.length > 0) {
+                dataForPrompt.policies = policies;
+              }
+            }
+          })
+        );
       }
 
-      // Also include focused task if relevant (for meeting prep)
-      const docTaskId = resolvedContext?.task_id || context?.focused_task_id;
       if (docTaskId) {
-        const task = await getTaskById(docTaskId);
-        if (task) {
-          dataForPrompt.focusedTask = task;
-          focusedTaskId = docTaskId;
-        }
+        docPromises.push(
+          getTaskById(docTaskId).then((task) => {
+            if (task) {
+              dataForPrompt.focusedTask = task;
+              focusedTaskId = docTaskId;
+            }
+          })
+        );
       }
+
+      await Promise.all(docPromises);
       break;
     }
 
     case 'greeting':
     case 'help': {
       // For greetings, show a summary of what's pending
-      const todaysTasks = await getTodaysTasks();
-      const pendingReviews = await getPendingReviewTasks();
+      const [todaysTasks, pendingReviews] = await Promise.all([
+        getTodaysTasks(),
+        getPendingReviewTasks(),
+      ]);
       dataForPrompt.tasks = [...todaysTasks.slice(0, 3), ...pendingReviews.slice(0, 2)];
       break;
     }
