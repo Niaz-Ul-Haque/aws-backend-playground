@@ -68,21 +68,27 @@ jobs:
       - name: Get stack outputs
         id: stack-outputs
         run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.STACK_NAME }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+            --output text)
+
           FUNCTION_URL=$(aws cloudformation describe-stacks \
             --stack-name ${{ env.STACK_NAME }} \
-            --query 'Stacks[0].Outputs[?OutputKey==`FunctionUrl`].OutputValue' \
+            --query 'Stacks[0].Outputs[?OutputKey==`ChatStreamEndpoint`].OutputValue' \
             --output text)
-          
+
           TABLE_NAME=$(aws cloudformation describe-stacks \
             --stack-name ${{ env.STACK_NAME }} \
             --query 'Stacks[0].Outputs[?OutputKey==`TableName`].OutputValue' \
             --output text)
-          
+
           LLM_API_KEY_PARAM=$(aws cloudformation describe-stacks \
             --stack-name ${{ env.STACK_NAME }} \
             --query 'Stacks[0].Outputs[?OutputKey==`LlmApiKeyParamName`].OutputValue' \
             --output text)
-          
+
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
           echo "function_url=$FUNCTION_URL" >> $GITHUB_OUTPUT
           echo "table_name=$TABLE_NAME" >> $GITHUB_OUTPUT
           echo "llm_api_key_param=$LLM_API_KEY_PARAM" >> $GITHUB_OUTPUT
@@ -107,6 +113,13 @@ jobs:
 
       - name: Print deployment info
         run: |
-          echo "✅ Deployment successful!"
-          echo "📍 Function URL: ${{ steps.stack-outputs.outputs.function_url }}"
-          echo "📊 Table Name: ${{ steps.stack-outputs.outputs.table_name }}"
+          echo "Deployment successful!"
+          echo ""
+          echo "--- Stack Outputs ---"
+          echo "API Gateway URL: ${{ steps.stack-outputs.outputs.api_url }}"
+          echo "Chat Stream URL: ${{ steps.stack-outputs.outputs.function_url }}"
+          echo "Table Name:      ${{ steps.stack-outputs.outputs.table_name }}"
+          echo ""
+          echo "--- Frontend Configuration ---"
+          echo "NEXT_PUBLIC_API_BASE_URL=${{ steps.stack-outputs.outputs.api_url }}"
+          echo "NEXT_PUBLIC_CHAT_STREAM_URL=${{ steps.stack-outputs.outputs.function_url }}"

@@ -341,7 +341,7 @@ Outputs:
 
   ChatStreamEndpoint:
     Description: Chat Streaming Endpoint (SSE with status updates)
-    Value: !Ref ChatStreamFunctionUrl
+    Value: !GetAtt ChatStreamFunctionUrl.FunctionUrl
 
   ClientsEndpoint:
     Description: Clients API Endpoint
