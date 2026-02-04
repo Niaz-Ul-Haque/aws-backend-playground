@@ -112,9 +112,19 @@ Resources:
         AllowOrigins:
           - '*'
         AllowHeaders:
-          - Content-Type
-          - Accept
-          - Cache-Control
+          - content-type
+          - accept
+          - cache-control
+          - accept-encoding
+          - accept-language
+          - origin
+          - user-agent
+          - sec-fetch-dest
+          - sec-fetch-mode
+          - sec-fetch-site
+          - sec-ch-ua
+          - sec-ch-ua-mobile
+          - sec-ch-ua-platform
         AllowMethods:
           - POST
         MaxAge: 300
