@@ -37,16 +37,11 @@ Globals:
         LLM_TIMEOUT_MS: !Ref LlmTimeoutMs
 
 Resources:
-  #############################################
-  # API Gateway (HTTP API for streaming support)
-  #############################################
   CiriApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      Name: !Sub '${AWS::StackName}-api'
       StageName: !Ref AWS::StackName
       Description: Ciri AI Backend API with streaming support
-      # HTTP API supports Lambda response streaming
       CorsConfiguration:
         AllowMethods:
           - GET
@@ -67,11 +62,6 @@ Resources:
           - '*'
         MaxAge: 300
 
-  #############################################
-  # Lambda Functions
-  #############################################
-  
-  # Chat Handler - Main AI conversation endpoint (Streaming)
   ChatFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -95,8 +85,7 @@ Resources:
             ApiId: !Ref CiriApi
             Path: /api/chat
             Method: POST
-  
-  # Chat Streaming Handler - SSE streaming endpoint
+
   ChatStreamFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -105,21 +94,6 @@ Resources:
       Handler: dist/handlers/chat-stream.handler
       Timeout: 120
       MemorySize: 512
-      # Enable response streaming for this function
-      FunctionUrlConfig:
-        AuthType: NONE
-        InvokeMode: RESPONSE_STREAM
-        Cors:
-          AllowOrigins:
-            - '*'
-          AllowHeaders:
-            - Content-Type
-            - Accept
-            - Cache-Control
-          AllowMethods:
-            - POST
-            - OPTIONS
-          MaxAge: 300
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DataTable
@@ -129,7 +103,32 @@ Resources:
               - ssm:GetParameter
             Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}-llmApiKey'
 
-  # Clients Handler - Client CRUD operations
+  ChatStreamFunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      AuthType: NONE
+      TargetFunctionArn: !GetAtt ChatStreamFunction.Arn
+      Cors:
+        AllowOrigins:
+          - '*'
+        AllowHeaders:
+          - Content-Type
+          - Accept
+          - Cache-Control
+        AllowMethods:
+          - POST
+        MaxAge: 300
+
+  ChatStreamFunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunctionUrl
+      FunctionName: !GetAtt ChatStreamFunction.Arn
+      Principal: '*'
+      FunctionUrlAuthType: NONE
+    DependsOn:
+      - ChatStreamFunctionUrl
+
   ClientsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -153,7 +152,6 @@ Resources:
             Path: /api/clients/{id}
             Method: GET
 
-  # Policies Handler - Policy operations
   PoliciesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -177,7 +175,6 @@ Resources:
             Path: /api/policies/{id}
             Method: GET
 
-  # Tasks Handler - Task CRUD and actions
   TasksFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -231,7 +228,6 @@ Resources:
             Path: /api/tasks/{id}/approve-with-edits
             Method: POST
 
-  # Actions Handler - Action execution endpoints (Phase 1 & 2)
   ActionsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -281,7 +277,6 @@ Resources:
             Path: /api/actions/bulk-renewal
             Method: POST
 
-  # Health Check Handler
   HealthFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -298,9 +293,6 @@ Resources:
             Path: /api/health
             Method: GET
 
-  #############################################
-  # DynamoDB Table
-  #############################################
   DataTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -329,11 +321,7 @@ Resources:
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
-      # Free tier: 25 GB storage, 25 WCU, 25 RCU always free
 
-  #############################################
-  # SSM Parameter for API Key
-  #############################################
   LlmApiKeyParam:
     Type: AWS::SSM::Parameter
     Properties:
@@ -342,9 +330,6 @@ Resources:
       Value: !Ref LlmApiKey
       Description: LLM API Key for Z.ai
 
-#############################################
-# Outputs
-#############################################
 Outputs:
   ApiUrl:
     Description: API Gateway URL
@@ -356,7 +341,7 @@ Outputs:
 
   ChatStreamEndpoint:
     Description: Chat Streaming Endpoint (SSE with status updates)
-    Value: !GetAtt ChatStreamFunctionUrl.FunctionUrl
+    Value: !Ref ChatStreamFunctionUrl
 
   ClientsEndpoint:
     Description: Clients API Endpoint
