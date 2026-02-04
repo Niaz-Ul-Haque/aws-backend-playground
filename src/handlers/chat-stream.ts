@@ -262,10 +262,7 @@ async function streamingHandler(
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type,Accept,Cache-Control',
-      'Access-Control-Allow-Methods': 'POST,OPTIONS',
-      'X-Accel-Buffering': 'no', // Disable nginx buffering
+      'X-Accel-Buffering': 'no',
     },
   });
 
@@ -274,17 +271,6 @@ async function streamingHandler(
   };
 
   try {
-    // Handle preflight - safely access method from either Function URL or API Gateway event
-    const method = event.requestContext?.http?.method || 
-                   (event as any).requestContext?.httpMethod || 
-                   'POST';
-    
-    if (method === 'OPTIONS') {
-      write(createStatusEvent('complete', 'CORS preflight', 100));
-      httpStream.end();
-      return;
-    }
-
     // Parse request
     const body = parseBody(event);
     if (!body || !body.message) {
