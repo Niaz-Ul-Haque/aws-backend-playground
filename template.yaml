@@ -105,9 +105,6 @@ Resources:
       Handler: dist/handlers/chat-stream.handler
       Timeout: 120
       MemorySize: 512
-      Runtime: nodejs20.x
-      Architectures:
-        - arm64
       Environment:
         Variables:
           TABLE_NAME: !Ref DataTable
