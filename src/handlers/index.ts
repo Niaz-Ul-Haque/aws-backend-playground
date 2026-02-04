@@ -4,6 +4,7 @@
  */
 
 export { handler as chatHandler } from './chat';
+export { handler as chatStreamHandler } from './chat-stream';
 export { handler as clientsHandler } from './clients';
 export { handler as policiesHandler } from './policies';
 export { handler as tasksHandler } from './tasks';

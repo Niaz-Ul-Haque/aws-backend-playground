@@ -524,6 +524,18 @@ export interface ChatContext {
   focused_policy_id?: string;
   last_intent?: string;
   conversation_history?: Message[];
+  /** Collected entity IDs across conversation (from frontend) */
+  collected_entities?: {
+    client_ids: string[];
+    policy_ids: string[];
+    task_ids: string[];
+  };
+  /** Recent actions performed (from frontend) */
+  recent_actions?: string[];
+  /** Whether there are pending drafts (from frontend) */
+  has_pending_drafts?: boolean;
+  /** Session start time (from frontend) */
+  session_started_at?: string;
 }
 
 /**
@@ -533,6 +545,7 @@ export interface ChatRequest {
   message: string;
   context?: ChatContext;
   session_id?: string;
+  conversation_history?: Message[];
 }
 
 /**
@@ -545,6 +558,66 @@ export interface ChatResponse {
   tasks_updated?: boolean;
   error?: string;
 }
+
+// ============================================================
+// Streaming Types (SSE)
+// ============================================================
+
+/**
+ * Status phases sent during streaming
+ */
+export type StreamingStatus =
+  | 'connecting'
+  | 'classifying_intent'
+  | 'resolving_context'
+  | 'gathering_data'
+  | 'executing_action'
+  | 'building_prompt'
+  | 'calling_llm'
+  | 'parsing_response'
+  | 'complete'
+  | 'error';
+
+/**
+ * SSE event types
+ */
+export type SSEEventType = 'status' | 'progress' | 'partial' | 'result' | 'error';
+
+/**
+ * SSE event data structure
+ */
+export interface SSEEventData {
+  status?: StreamingStatus;
+  message?: string;
+  progress?: number; // 0-100
+  partial_content?: string;
+  result?: ChatResponse;
+  error?: string;
+}
+
+/**
+ * SSE event structure sent to frontend
+ */
+export interface SSEEvent {
+  type: SSEEventType;
+  data: SSEEventData;
+}
+
+/**
+ * Human-readable status messages for each phase
+ */
+export const STREAMING_STATUS_MESSAGES: Record<StreamingStatus, string> = {
+  connecting: 'Connected to Ciri',
+  classifying_intent: 'Understanding your request...',
+  resolving_context: 'Checking conversation context...',
+  gathering_data: 'Retrieving relevant information...',
+  executing_action: 'Executing action...',
+  building_prompt: 'Preparing AI request...',
+  calling_llm: 'Ciri is thinking...',
+  parsing_response: 'Processing response...',
+  complete: 'Done',
+  error: 'An error occurred',
+};
 
 /**
  * DynamoDB record for chat session
