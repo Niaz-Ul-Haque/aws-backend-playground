@@ -38,35 +38,47 @@ Globals:
 
 Resources:
   #############################################
-  # API Gateway
+  # API Gateway (HTTP API for streaming support)
   #############################################
   CiriApi:
-    Type: AWS::Serverless::Api
+    Type: AWS::Serverless::HttpApi
     Properties:
       Name: !Sub '${AWS::StackName}-api'
       StageName: !Ref AWS::StackName
-      Description: Ciri AI Backend API
-      # Free tier: 1 million API calls per month for 12 months
-      EndpointConfiguration:
-        Type: REGIONAL
-      Cors:
-        AllowMethods: "'GET,POST,PUT,DELETE,PATCH,OPTIONS'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        AllowOrigin: "'*'"
-        AllowCredentials: false
+      Description: Ciri AI Backend API with streaming support
+      # HTTP API supports Lambda response streaming
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - X-Amz-Date
+          - Authorization
+          - X-Api-Key
+          - X-Amz-Security-Token
+          - Accept
+          - Cache-Control
+        AllowOrigins:
+          - '*'
+        MaxAge: 300
 
   #############################################
   # Lambda Functions
   #############################################
   
-  # Chat Handler - Main AI conversation endpoint
+  # Chat Handler - Main AI conversation endpoint (Streaming)
   ChatFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-chat'
       CodeUri: src/
       Handler: dist/handlers/chat.handler
-      Timeout: 60
+      Timeout: 120
       MemorySize: 512
       Policies:
         - DynamoDBCrudPolicy:
@@ -78,11 +90,44 @@ Resources:
             Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}-llmApiKey'
       Events:
         ChatPost:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/chat
             Method: POST
+  
+  # Chat Streaming Handler - SSE streaming endpoint
+  ChatStreamFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-chat-stream'
+      CodeUri: src/
+      Handler: dist/handlers/chat-stream.handler
+      Timeout: 120
+      MemorySize: 512
+      # Enable response streaming for this function
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+        Cors:
+          AllowOrigins:
+            - '*'
+          AllowHeaders:
+            - Content-Type
+            - Accept
+            - Cache-Control
+          AllowMethods:
+            - POST
+            - OPTIONS
+          MaxAge: 300
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DataTable
+        - Statement:
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+            Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}-llmApiKey'
 
   # Clients Handler - Client CRUD operations
   ClientsFunction:
@@ -96,15 +141,15 @@ Resources:
             TableName: !Ref DataTable
       Events:
         ClientsList:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/clients
             Method: GET
         ClientsGet:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/clients/{id}
             Method: GET
 
@@ -120,15 +165,15 @@ Resources:
             TableName: !Ref DataTable
       Events:
         PoliciesList:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/policies
             Method: GET
         PoliciesGet:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/policies/{id}
             Method: GET
 
@@ -144,45 +189,45 @@ Resources:
             TableName: !Ref DataTable
       Events:
         TasksList:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/tasks
             Method: GET
         TasksGet:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/tasks/{id}
             Method: GET
         TasksUpdate:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/tasks/{id}
             Method: PATCH
         TasksApprove:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/tasks/{id}/approve
             Method: POST
         TasksReject:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/tasks/{id}/reject
             Method: POST
         TasksComplete:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/tasks/{id}/complete
             Method: POST
         TasksApproveWithEdits:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/tasks/{id}/approve-with-edits
             Method: POST
 
@@ -200,39 +245,39 @@ Resources:
             TableName: !Ref DataTable
       Events:
         ActionsSendEmail:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/actions/send-email
             Method: POST
         ActionsResolveCompliance:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/actions/resolve-compliance
             Method: POST
         ActionsGenerateReport:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/actions/generate-report
             Method: POST
         ActionsExecute:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/actions/execute
             Method: POST
         ActionsBulkTasks:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/actions/bulk-tasks
             Method: POST
         ActionsBulkRenewal:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/actions/bulk-renewal
             Method: POST
 
@@ -247,9 +292,9 @@ Resources:
       Timeout: 10
       Events:
         HealthGet:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CiriApi
+            ApiId: !Ref CiriApi
             Path: /api/health
             Method: GET
 
@@ -306,8 +351,12 @@ Outputs:
     Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}'
 
   ChatEndpoint:
-    Description: Chat API Endpoint
+    Description: Chat API Endpoint (non-streaming)
     Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}/api/chat'
+
+  ChatStreamEndpoint:
+    Description: Chat Streaming Endpoint (SSE with status updates)
+    Value: !GetAtt ChatStreamFunctionUrl.FunctionUrl
 
   ClientsEndpoint:
     Description: Clients API Endpoint
