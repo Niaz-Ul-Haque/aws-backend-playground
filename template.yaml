@@ -109,32 +109,6 @@ Resources:
               - ssm:GetParameter
             Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}-llmApiKey'
 
-  ChatStreamFunctionUrl:
-    Type: AWS::Lambda::Url
-    Properties:
-      AuthType: NONE
-      TargetFunctionArn: !GetAtt ChatStreamFunction.Arn
-      Cors:
-        AllowOrigins:
-          - '*'
-        AllowHeaders:
-          - Content-Type
-          - Accept
-          - Cache-Control
-        AllowMethods:
-          - POST
-        MaxAge: 300
-
-  ChatStreamFunctionUrlPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunctionUrl
-      FunctionName: !GetAtt ChatStreamFunction.Arn
-      Principal: '*'
-      FunctionUrlAuthType: NONE
-    DependsOn:
-      - ChatStreamFunctionUrl
-
   ClientsFunction:
     Type: AWS::Serverless::Function
     Properties:
