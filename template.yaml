@@ -37,9 +37,6 @@ Globals:
         LLM_TIMEOUT_MS: !Ref LlmTimeoutMs
 
 Resources:
-  #############################################
-  # API Gateway (HTTP API for streaming support)
-  #############################################
   CiriApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -65,11 +62,6 @@ Resources:
           - '*'
         MaxAge: 300
 
-  #############################################
-  # Lambda Functions
-  #############################################
-  
-  # Chat Handler - Main AI conversation endpoint (Streaming)
   ChatFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -93,8 +85,7 @@ Resources:
             ApiId: !Ref CiriApi
             Path: /api/chat
             Method: POST
-  
-  # Chat Streaming Handler - SSE streaming endpoint
+
   ChatStreamFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -126,7 +117,6 @@ Resources:
               - ssm:GetParameter
             Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}-llmApiKey'
 
-  # Clients Handler - Client CRUD operations
   ClientsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -150,7 +140,6 @@ Resources:
             Path: /api/clients/{id}
             Method: GET
 
-  # Policies Handler - Policy operations
   PoliciesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -174,7 +163,6 @@ Resources:
             Path: /api/policies/{id}
             Method: GET
 
-  # Tasks Handler - Task CRUD and actions
   TasksFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -228,7 +216,6 @@ Resources:
             Path: /api/tasks/{id}/approve-with-edits
             Method: POST
 
-  # Actions Handler - Action execution endpoints (Phase 1 & 2)
   ActionsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -278,7 +265,6 @@ Resources:
             Path: /api/actions/bulk-renewal
             Method: POST
 
-  # Health Check Handler
   HealthFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -295,9 +281,6 @@ Resources:
             Path: /api/health
             Method: GET
 
-  #############################################
-  # DynamoDB Table
-  #############################################
   DataTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -327,9 +310,6 @@ Resources:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
-  #############################################
-  # SSM Parameter for API Key
-  #############################################
   LlmApiKeyParam:
     Type: AWS::SSM::Parameter
     Properties:
@@ -338,9 +318,6 @@ Resources:
       Value: !Ref LlmApiKey
       Description: LLM API Key for Z.ai
 
-#############################################
-# Outputs
-#############################################
 Outputs:
   ApiUrl:
     Description: API Gateway URL
