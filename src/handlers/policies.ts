@@ -53,7 +53,7 @@ export async function handler(
 
   try {
     // Check if we have a policy ID in the path
-    const policyId = getRequiredPathParam(event.pathParameters, 'id');
+    const policyId = getRequiredPathParam(event.pathParameters as Record<string, string | undefined> | undefined, 'id');
     console.log('Policy ID from path:', policyId);
 
     if (policyId) {
@@ -63,7 +63,7 @@ export async function handler(
       return result;
     } else {
       console.log('Listing policies with filters');
-      const result = await handleListPolicies(event.queryStringParameters);
+      const result = await handleListPolicies(event.queryStringParameters ?? undefined);
       console.log('=== Policies Handler End ===');
       return result;
     }
