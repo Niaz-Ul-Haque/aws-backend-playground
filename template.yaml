@@ -337,7 +337,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name: !Sub '${AWS::StackName}-llmApiKey'
-      Type: String
+      Type: SecureString
       Value: !Ref LlmApiKey
       Description: LLM API Key for Z.ai
 
