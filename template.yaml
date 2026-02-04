@@ -43,10 +43,8 @@ Resources:
   CiriApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      Name: !Sub '${AWS::StackName}-api'
       StageName: !Ref AWS::StackName
       Description: Ciri AI Backend API with streaming support
-      # HTTP API supports Lambda response streaming
       CorsConfiguration:
         AllowMethods:
           - GET
@@ -328,7 +326,6 @@ Resources:
           Projection:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
-      # Free tier: 25 GB storage, 25 WCU, 25 RCU always free
 
   #############################################
   # SSM Parameter for API Key
@@ -337,7 +334,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name: !Sub '${AWS::StackName}-llmApiKey'
-      Type: SecureString
+      Type: String
       Value: !Ref LlmApiKey
       Description: LLM API Key for Z.ai
 
@@ -355,7 +352,7 @@ Outputs:
 
   ChatStreamEndpoint:
     Description: Chat Streaming Endpoint (SSE with status updates)
-    Value: !GetAtt ChatStreamFunction.FunctionUrl
+    Value: !GetAtt ChatStreamFunctionUrl.FunctionUrl
 
   ClientsEndpoint:
     Description: Clients API Endpoint
