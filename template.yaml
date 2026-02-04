@@ -94,6 +94,19 @@ Resources:
       Handler: dist/handlers/chat-stream.handler
       Timeout: 300
       MemorySize: 512
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+        Cors:
+          AllowOrigins:
+            - '*'
+          AllowHeaders:
+            - content-type
+            - accept
+            - cache-control
+          AllowMethods:
+            - POST
+          MaxAge: 300
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DataTable
@@ -312,6 +325,10 @@ Outputs:
   ChatEndpoint:
     Description: Chat API Endpoint (non-streaming)
     Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}/api/chat'
+
+  ChatStreamEndpoint:
+    Description: Chat Streaming Endpoint (SSE with status updates)
+    Value: !GetAtt ChatStreamFunctionUrl.FunctionUrl
 
   ClientsEndpoint:
     Description: Clients API Endpoint
