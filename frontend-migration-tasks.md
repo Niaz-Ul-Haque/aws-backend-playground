@@ -1,6 +1,6 @@
 # Frontend Migration Guide: Streaming Chat with Real-Time Status Updates
 
-This document describes the backend changes for streaming chat responses and provides detailed implementation steps for the frontend team.
+IMP: This document describes the backend changes for streaming chat responses and provides detailed implementation steps for the frontend team.
 
 ---
 
