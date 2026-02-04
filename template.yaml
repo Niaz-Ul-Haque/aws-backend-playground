@@ -22,7 +22,7 @@ Parameters:
     Description: LLM request timeout in milliseconds
   ChatStreamInvokeMode:
     Type: String
-    Default: RESPONSE_STREAM
+    Default: BUFFERED
     AllowedValues:
       - RESPONSE_STREAM
       - BUFFERED
@@ -135,16 +135,6 @@ Resources:
       FunctionName: !Ref ChatStreamFunction
       Principal: '*'
       FunctionUrlAuthType: NONE
-    DependsOn:
-      - ChatStreamFunctionUrl
-
-  ChatStreamFunctionInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref ChatStreamFunction
-      Principal: '*'
-      InvokedViaFunctionUrl: true
     DependsOn:
       - ChatStreamFunctionUrl
 
