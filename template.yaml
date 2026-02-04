@@ -105,14 +105,6 @@ Resources:
       Handler: dist/handlers/chat-stream.handler
       Timeout: 120
       MemorySize: 512
-      Environment:
-        Variables:
-          TABLE_NAME: !Ref DataTable
-          LLM_API_KEY: !Ref LlmApiKey
-          LLM_API_URL: !Ref LlmApiUrl
-          LLM_MODEL: !Ref LlmModel
-          LLM_TIMEOUT_MS: !Ref LlmTimeoutMs
-      # Enable response streaming for this function
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: RESPONSE_STREAM
