@@ -355,8 +355,8 @@ Outputs:
     Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}/api/chat'
 
   ChatStreamEndpoint:
-    Description: Chat Streaming Endpoint (SSE with status updates)
-    Value: !GetAtt ChatStreamFunction.FunctionUrl
+    Description: Chat Streaming Endpoint (SSE with status updates) - Get via Lambda Console or CLI
+    Value: !Sub '${ChatStreamFunction.Arn}'
 
   ClientsEndpoint:
     Description: Clients API Endpoint
