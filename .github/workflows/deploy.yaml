@@ -53,6 +53,7 @@ jobs:
           sam deploy \
             --stack-name ${{ env.STACK_NAME }} \
             --resolve-s3 \
+            --force-upload \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --capabilities CAPABILITY_IAM \
@@ -88,7 +89,7 @@ jobs:
           aws ssm put-parameter \
             --name ${{ steps.stack-outputs.outputs.llm_api_key_param }} \
             --value "${{ secrets.LLM_API_KEY }}" \
-            --type String \
+            --type SecureString \
             --overwrite
       - name: Install seed script dependencies
         working-directory: scripts
