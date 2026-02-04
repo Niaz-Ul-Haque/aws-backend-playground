@@ -20,6 +20,13 @@ Parameters:
     Type: String
     Default: '45000'
     Description: LLM request timeout in milliseconds
+  ChatStreamInvokeMode:
+    Type: String
+    Default: RESPONSE_STREAM
+    AllowedValues:
+      - RESPONSE_STREAM
+      - BUFFERED
+    Description: Lambda Function URL invoke mode for chat streaming endpoint
 
 Globals:
   Function:
@@ -94,20 +101,6 @@ Resources:
       Handler: dist/handlers/chat-stream.handler
       Timeout: 120
       MemorySize: 512
-      FunctionUrlConfig:
-        AuthType: NONE
-        InvokeMode: RESPONSE_STREAM
-        Cors:
-          AllowOrigins:
-            - '*'
-          AllowHeaders:
-            - Content-Type
-            - Accept
-            - Cache-Control
-          AllowMethods:
-            - POST
-            - OPTIONS
-          MaxAge: 300
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DataTable
@@ -116,6 +109,44 @@ Resources:
             Action:
               - ssm:GetParameter
             Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}-llmApiKey'
+
+  ChatStreamFunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      AuthType: NONE
+      TargetFunctionArn: !GetAtt ChatStreamFunction.Arn
+      InvokeMode: !Ref ChatStreamInvokeMode
+      Cors:
+        AllowOrigins:
+          - '*'
+        AllowHeaders:
+          - Content-Type
+          - Accept
+          - Cache-Control
+        AllowMethods:
+          - POST
+          - OPTIONS
+        MaxAge: 300
+
+  ChatStreamFunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunctionUrl
+      FunctionName: !Ref ChatStreamFunction
+      Principal: '*'
+      FunctionUrlAuthType: NONE
+    DependsOn:
+      - ChatStreamFunctionUrl
+
+  ChatStreamFunctionInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ChatStreamFunction
+      Principal: '*'
+      InvokedViaFunctionUrl: true
+    DependsOn:
+      - ChatStreamFunctionUrl
 
   ClientsFunction:
     Type: AWS::Serverless::Function
