@@ -231,3 +231,264 @@ export async function getWeeklySummary(): Promise<WeeklySummary> {
     renewalsDue: expiringPolicies.length,
   };
 }
+
+/**
+ * Premium analytics interfaces
+ */
+export interface TimeRange {
+  start: Date;
+  end: Date;
+}
+
+export interface PremiumBreakdown {
+  policyType: string;
+  totalPremium: number;
+  policyCount: number;
+  averagePremium: number;
+}
+
+export interface MonthlyTrend {
+  month: string;
+  newPolicies: number;
+  totalPremium: number;
+  newClients: number;
+}
+
+export interface QuarterlyMetrics {
+  quarter: string;
+  totalPremium: number;
+  newPolicies: number;
+  newClients: number;
+  activeClients: number;
+  retentionRate: number;
+  averagePremium: number;
+}
+
+/**
+ * Get total premiums collected in a time range
+ */
+export async function getTotalPremiums(timeRange?: TimeRange): Promise<number> {
+  const policies = await getPolicies();
+  
+  let filteredPolicies = policies.filter((p) => p.policy_status === 'Active');
+  
+  // If time range provided, filter by policy creation date or payment date
+  if (timeRange) {
+    filteredPolicies = filteredPolicies.filter((p) => {
+      const policyDate = new Date(p.created_at);
+      return policyDate >= timeRange.start && policyDate <= timeRange.end;
+    });
+  }
+  
+  const totalPremium = filteredPolicies.reduce((sum, p) => {
+    return sum + (p.premium_amount || 0);
+  }, 0);
+  
+  return totalPremium;
+}
+
+/**
+ * Break down premium revenue by policy type for a given year
+ */
+export async function getPremiumBreakdownByType(year?: number): Promise<PremiumBreakdown[]> {
+  const policies = await getPolicies();
+  
+  // Filter by year if provided
+  let filteredPolicies = policies;
+  if (year) {
+    filteredPolicies = policies.filter((p) => {
+      const policyYear = new Date(p.created_at).getFullYear();
+      return policyYear === year;
+    });
+  }
+  
+  // Group by policy type
+  const breakdownMap = new Map<string, { total: number; count: number }>();
+  
+  filteredPolicies.forEach((p) => {
+    if (p.policy_status !== 'Active') return;
+    
+    const type = p.policy_type || 'Other';
+    const premium = p.premium_amount || 0;
+    
+    if (!breakdownMap.has(type)) {
+      breakdownMap.set(type, { total: 0, count: 0 });
+    }
+    
+    const current = breakdownMap.get(type)!;
+    current.total += premium;
+    current.count += 1;
+  });
+  
+  // Convert to array
+  const breakdown: PremiumBreakdown[] = [];
+  breakdownMap.forEach((value, key) => {
+    breakdown.push({
+      policyType: key,
+      totalPremium: value.total,
+      policyCount: value.count,
+      averagePremium: value.count > 0 ? value.total / value.count : 0,
+    });
+  });
+  
+  // Sort by total premium descending
+  breakdown.sort((a, b) => b.totalPremium - a.totalPremium);
+  
+  return breakdown;
+}
+
+/**
+ * Get distribution of clients across different insurance types
+ */
+export async function getClientDistributionByType(): Promise<Record<string, number>> {
+  const policies = await getPolicies();
+  const activeClientIds = new Set<string>();
+  
+  // Count unique clients per policy type
+  const distribution: Record<string, Set<string>> = {};
+  
+  policies.forEach((p) => {
+    if (p.policy_status !== 'Active') return;
+    
+    const type = p.policy_type || 'Other';
+    if (!distribution[type]) {
+      distribution[type] = new Set();
+    }
+    distribution[type].add(p.client_id);
+    activeClientIds.add(p.client_id);
+  });
+  
+  // Convert to counts
+  const result: Record<string, number> = {};
+  Object.keys(distribution).forEach((type) => {
+    result[type] = distribution[type].size;
+  });
+  
+  return result;
+}
+
+/**
+ * Display monthly sales trends for the past N months
+ */
+export async function getMonthlySalesTrends(months: number = 6): Promise<MonthlyTrend[]> {
+  const [policies, clients] = await Promise.all([getPolicies(), getClients()]);
+  
+  const now = new Date();
+  const trends: MonthlyTrend[] = [];
+  
+  // Generate data for each of the past N months
+  for (let i = months - 1; i >= 0; i--) {
+    const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
+    
+    // Filter policies created in this month
+    const monthPolicies = policies.filter((p) => {
+      const createdDate = new Date(p.created_at);
+      return createdDate >= monthStart && createdDate <= monthEnd;
+    });
+    
+    // Filter clients created in this month
+    const monthClients = clients.filter((c) => {
+      const createdDate = new Date(c.created_at);
+      return createdDate >= monthStart && createdDate <= monthEnd;
+    });
+    
+    const totalPremium = monthPolicies.reduce((sum, p) => sum + (p.premium_amount || 0), 0);
+    
+    trends.push({
+      month: monthDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
+      newPolicies: monthPolicies.length,
+      totalPremium,
+      newClients: monthClients.length,
+    });
+  }
+  
+  return trends;
+}
+
+/**
+ * Compare quarterly revenue between two quarters
+ */
+export async function getQuarterlyRevenue(quarters: string[]): Promise<Record<string, number>> {
+  const policies = await getPolicies();
+  const result: Record<string, number> = {};
+  
+  quarters.forEach((quarter) => {
+    // Parse quarter string like "Q4 2025" or "Q1 2026"
+    const match = quarter.match(/Q(\d)\s+(\d{4})/);
+    if (!match) return;
+    
+    const q = parseInt(match[1]);
+    const year = parseInt(match[2]);
+    
+    // Calculate quarter date range
+    const startMonth = (q - 1) * 3; // Q1=0, Q2=3, Q3=6, Q4=9
+    const quarterStart = new Date(year, startMonth, 1);
+    const quarterEnd = new Date(year, startMonth + 3, 0, 23, 59, 59);
+    
+    // Filter policies created in this quarter
+    const quarterPolicies = policies.filter((p) => {
+      const createdDate = new Date(p.created_at);
+      return createdDate >= quarterStart && createdDate <= quarterEnd;
+    });
+    
+    const revenue = quarterPolicies.reduce((sum, p) => sum + (p.premium_amount || 0), 0);
+    result[quarter] = revenue;
+  });
+  
+  return result;
+}
+
+/**
+ * Get comprehensive quarterly metrics for dashboard
+ */
+export async function getQuarterlyMetrics(quarter: string): Promise<QuarterlyMetrics> {
+  const [policies, clients] = await Promise.all([getPolicies(), getClients()]);
+  
+  // Parse quarter string like "Q1 2026"
+  const match = quarter.match(/Q(\d)\s+(\d{4})/);
+  if (!match) {
+    throw new Error('Invalid quarter format. Use "Q1 2026" format.');
+  }
+  
+  const q = parseInt(match[1]);
+  const year = parseInt(match[2]);
+  
+  // Calculate quarter date range
+  const startMonth = (q - 1) * 3;
+  const quarterStart = new Date(year, startMonth, 1);
+  const quarterEnd = new Date(year, startMonth + 3, 0, 23, 59, 59);
+  
+  // Policies created this quarter
+  const newPolicies = policies.filter((p) => {
+    const createdDate = new Date(p.created_at);
+    return createdDate >= quarterStart && createdDate <= quarterEnd;
+  });
+  
+  // Clients created this quarter
+  const newClients = clients.filter((c) => {
+    const createdDate = new Date(c.created_at);
+    return createdDate >= quarterStart && createdDate <= quarterEnd;
+  });
+  
+  // Active clients at end of quarter
+  const activeClients = clients.filter((c) => c.client_status === 'Active').length;
+  
+  // Total premium from new policies
+  const totalPremium = newPolicies.reduce((sum, p) => sum + (p.premium_amount || 0), 0);
+  const averagePremium = newPolicies.length > 0 ? totalPremium / newPolicies.length : 0;
+  
+  // Calculate retention rate (simplified: active clients / total clients)
+  const retentionRate = clients.length > 0 ? (activeClients / clients.length) * 100 : 0;
+  
+  return {
+    quarter,
+    totalPremium,
+    newPolicies: newPolicies.length,
+    newClients: newClients.length,
+    activeClients,
+    retentionRate: Math.round(retentionRate * 10) / 10, // Round to 1 decimal
+    averagePremium: Math.round(averagePremium * 100) / 100, // Round to 2 decimals
+  };
+}
