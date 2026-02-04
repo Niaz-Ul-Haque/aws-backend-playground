@@ -90,6 +90,12 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${AWS::StackName}-chat-stream'
+      FunctionUrlConfig:
+        AuthType: NONE  # ← This is key!
+        Cors:
+          AllowOrigins: ['*']
+          AllowMethods: [POST, OPTIONS]
+          AllowHeaders: [Content-Type, Accept, Cache-Control]
       CodeUri: src/
       Handler: dist/handlers/chat-stream.handler
       Timeout: 120
