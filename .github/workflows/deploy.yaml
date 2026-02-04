@@ -37,6 +37,9 @@ jobs:
       - name: Setup AWS SAM
         uses: aws-actions/setup-sam@v2
 
+      - name: Clean SAM build
+        run: rm -rf .aws-sam
+
       - name: Install dependencies
         working-directory: src
         run: npm ci || npm install
