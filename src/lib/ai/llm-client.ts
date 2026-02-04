@@ -33,7 +33,7 @@ interface LLMResponse {
 // Zhipu AI API configuration (official international endpoint per docs.z.ai)
 const Z_AI_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
 const DEFAULT_MODEL = 'glm-4.7-flashx';
-const DEFAULT_TIMEOUT_MS = 45000;
+const DEFAULT_TIMEOUT_MS = 90000;
 const MAX_RETRIES = 2;
 
 /** Check if the error is a network/connection error worth retrying */

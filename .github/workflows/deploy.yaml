@@ -63,7 +63,7 @@ jobs:
             --parameter-overrides \
               LlmApiKey='${{ secrets.LLM_API_KEY }}' \
               LlmApiUrl='https://api.z.ai/api/paas/v4/chat/completions' \
-              LlmTimeoutMs='60000'
+              LlmTimeoutMs='90000'
 
       - name: Get stack outputs
         id: stack-outputs

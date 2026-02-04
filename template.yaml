@@ -18,7 +18,7 @@ Parameters:
     Description: LLM model name
   LlmTimeoutMs:
     Type: String
-    Default: '45000'
+    Default: '90000'
     Description: LLM request timeout in milliseconds
 
 Globals:
@@ -68,7 +68,7 @@ Resources:
       FunctionName: !Sub '${AWS::StackName}-chat'
       CodeUri: src/
       Handler: dist/handlers/chat.handler
-      Timeout: 120
+      Timeout: 300
       MemorySize: 512
       Policies:
         - DynamoDBCrudPolicy:
@@ -92,8 +92,21 @@ Resources:
       FunctionName: !Sub '${AWS::StackName}-chat-stream'
       CodeUri: src/
       Handler: dist/handlers/chat-stream.handler
-      Timeout: 120
+      Timeout: 300
       MemorySize: 512
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+        Cors:
+          AllowOrigins:
+            - '*'
+          AllowHeaders:
+            - content-type
+            - accept
+            - cache-control
+          AllowMethods:
+            - POST
+          MaxAge: 300
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DataTable
@@ -102,43 +115,6 @@ Resources:
             Action:
               - ssm:GetParameter
             Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}-llmApiKey'
-
-  ChatStreamFunctionUrl:
-    Type: AWS::Lambda::Url
-    Properties:
-      AuthType: NONE
-      InvokeMode: RESPONSE_STREAM
-      TargetFunctionArn: !GetAtt ChatStreamFunction.Arn
-      Cors:
-        AllowOrigins:
-          - '*'
-        AllowHeaders:
-          - content-type
-          - accept
-          - cache-control
-          - accept-encoding
-          - accept-language
-          - origin
-          - user-agent
-          - sec-fetch-dest
-          - sec-fetch-mode
-          - sec-fetch-site
-          - sec-ch-ua
-          - sec-ch-ua-mobile
-          - sec-ch-ua-platform
-        AllowMethods:
-          - POST
-        MaxAge: 300
-
-  ChatStreamFunctionUrlPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunctionUrl
-      FunctionName: !GetAtt ChatStreamFunction.Arn
-      Principal: '*'
-      FunctionUrlAuthType: NONE
-    DependsOn:
-      - ChatStreamFunctionUrl
 
   ClientsFunction:
     Type: AWS::Serverless::Function
