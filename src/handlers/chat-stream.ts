@@ -273,8 +273,12 @@ async function streamingHandler(
   };
 
   try {
-    // Handle preflight
-    if (event.requestContext.http.method === 'OPTIONS') {
+    // Handle preflight - safely access method from either Function URL or API Gateway event
+    const method = event.requestContext?.http?.method || 
+                   (event as any).requestContext?.httpMethod || 
+                   'POST';
+    
+    if (method === 'OPTIONS') {
       write(createStatusEvent('complete', 'CORS preflight', 100));
       httpStream.end();
       return;
