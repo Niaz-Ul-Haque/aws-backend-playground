@@ -253,6 +253,7 @@ function maxTokensForIntent(intent: string): number {
 async function streamingHandler(
   event: APIGatewayProxyEventV2,
   responseStream: NodeJS.WritableStream,
+  context: unknown
 ): Promise<void> {
   // Create SSE response stream with proper headers
   const httpStream = awslambda.HttpResponseStream.from(responseStream, {
