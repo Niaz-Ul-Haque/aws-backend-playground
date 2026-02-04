@@ -50,6 +50,7 @@ function maxTokensForIntent(intent: string): number {
     case 'approve_task':
     case 'reject_task':
     case 'complete_task':
+    case 'send_email':
       return 800;
 
     // Listing / display intents
@@ -92,16 +93,35 @@ function maxTokensForIntent(intent: string): number {
     case 'search_policies':
       return 2000;
 
+    // Phase 1 & 2: New card types with moderate output
+    case 'show_analytics':
+    case 'show_portfolio':
+    case 'run_compliance_check':
+    case 'compare_options':
+    case 'generate_report':
+    // Phase 3: Workflow card types
+    case 'show_calendar':
+    case 'preview_document':
+    case 'track_progress':
+    case 'show_renewals':
+    case 'bulk_action':
+      return 3000;
+
     // Document generation intents (need full output budget)
     case 'create_compliance_check':
     case 'create_portfolio_analysis':
     case 'create_client_summary':
     case 'create_meeting_prep':
     case 'create_report':
+    case 'create_proposal':
     case 'draft_email':
     case 'draft_meeting_notes':
     case 'draft_birthday_message':
     case 'draft_renewal_notice':
+    // Phase 3: Meeting notes and reminders
+    case 'create_meeting_notes':
+    case 'schedule_meeting':
+    case 'set_reminder':
       return 4000;
 
     default:
@@ -125,6 +145,11 @@ export async function handler(
   console.log('Query params:', event.queryStringParameters);
   console.log('Path params:', event.pathParameters);
   logRequest(method, path, event.body);
+
+  // Handle CORS preflight
+  if (method === 'OPTIONS') {
+    return successResponse({}, 200);
+  }
 
   // Only allow POST
   if (method !== 'POST') {
@@ -422,7 +447,12 @@ async function gatherDataForIntent(
     case 'create_portfolio_analysis':
     case 'create_client_summary':
     case 'create_meeting_prep':
-    case 'create_report': {
+    case 'create_report':
+    case 'run_compliance_check':
+    case 'show_portfolio':
+    case 'create_proposal':
+    case 'compare_options':
+    case 'generate_report': {
       const docClientName = entities.client_name as string;
       const docClientId = resolvedContext?.client_id || context?.focused_client_id || (entities.client_id as string);
       const docTaskId = resolvedContext?.task_id || context?.focused_task_id;
@@ -473,6 +503,155 @@ async function gatherDataForIntent(
       }
 
       await Promise.all(docPromises);
+      break;
+    }
+
+    // Phase 1 & 2: Analytics and dashboard intents
+    case 'show_analytics':
+    case 'show_dashboard': {
+      // Gather summary data for dashboard/analytics view
+      const [allTasks, allClients, expiringPolicies] = await Promise.all([
+        getTasks(),
+        getClients(),
+        getExpiringPolicies(),
+      ]);
+      dataForPrompt.tasks = allTasks;
+      dataForPrompt.clients = allClients;
+      dataForPrompt.policies = expiringPolicies;
+      break;
+    }
+
+    // Email drafting - needs client context
+    case 'draft_email':
+    case 'draft_birthday_message':
+    case 'draft_renewal_notice': {
+      const emailClientName = entities.client_name as string;
+      const emailClientId = resolvedContext?.client_id || context?.focused_client_id;
+
+      if (emailClientName) {
+        const client = await getClientByName(emailClientName);
+        if (client) {
+          dataForPrompt.focusedClient = client;
+          focusedClientId = client.client_id;
+          const policies = await getPoliciesForClient(client.client_id);
+          if (policies.length > 0) {
+            dataForPrompt.policies = policies;
+          }
+        }
+      } else if (emailClientId) {
+        const [client, policies] = await Promise.all([
+          getClientById(emailClientId),
+          getPoliciesForClient(emailClientId),
+        ]);
+        if (client) {
+          dataForPrompt.focusedClient = client;
+          focusedClientId = client.client_id;
+          if (policies.length > 0) {
+            dataForPrompt.policies = policies;
+          }
+        }
+      }
+      break;
+    }
+
+    // Phase 3: Calendar/scheduling intents
+    case 'show_calendar':
+    case 'schedule_meeting':
+    case 'set_reminder': {
+      // For calendar, we need tasks and any client context
+      const calClientId = resolvedContext?.client_id || context?.focused_client_id;
+      const calPromises: Promise<void>[] = [];
+
+      // Get tasks for calendar view
+      calPromises.push(
+        getTodaysTasks().then((tasks) => {
+          dataForPrompt.tasks = tasks;
+        })
+      );
+
+      if (calClientId) {
+        calPromises.push(
+          getClientById(calClientId).then((client) => {
+            if (client) {
+              dataForPrompt.focusedClient = client;
+              focusedClientId = client.client_id;
+            }
+          })
+        );
+      }
+
+      await Promise.all(calPromises);
+      break;
+    }
+
+    // Phase 3: Document preview
+    case 'preview_document': {
+      const docClientId = resolvedContext?.client_id || context?.focused_client_id;
+      if (docClientId) {
+        const [client, policies] = await Promise.all([
+          getClientById(docClientId),
+          getPoliciesForClient(docClientId),
+        ]);
+        if (client) {
+          dataForPrompt.focusedClient = client;
+          focusedClientId = client.client_id;
+        }
+        if (policies.length > 0) {
+          dataForPrompt.policies = policies;
+        }
+      }
+      break;
+    }
+
+    // Phase 3: Progress tracking
+    case 'track_progress': {
+      const progressClientId = resolvedContext?.client_id || context?.focused_client_id;
+      if (progressClientId) {
+        const client = await getClientById(progressClientId);
+        if (client) {
+          dataForPrompt.focusedClient = client;
+          focusedClientId = client.client_id;
+        }
+      }
+      // In a real implementation, we'd fetch application/claim progress here
+      break;
+    }
+
+    // Phase 3: Meeting notes
+    case 'create_meeting_notes': {
+      const mtgClientId = resolvedContext?.client_id || context?.focused_client_id;
+      if (mtgClientId) {
+        const [client, policies] = await Promise.all([
+          getClientById(mtgClientId),
+          getPoliciesForClient(mtgClientId),
+        ]);
+        if (client) {
+          dataForPrompt.focusedClient = client;
+          focusedClientId = client.client_id;
+        }
+        if (policies.length > 0) {
+          dataForPrompt.policies = policies;
+        }
+      }
+      break;
+    }
+
+    // Phase 3: Renewals
+    case 'show_renewals': {
+      const renewalPolicies = await getExpiringPolicies();
+      dataForPrompt.policies = renewalPolicies;
+      break;
+    }
+
+    // Phase 4: Bulk actions
+    case 'bulk_action': {
+      // Get all pending tasks and expiring policies for bulk action context
+      const [allTasks, expiringPolicies] = await Promise.all([
+        getTasks(),
+        getExpiringPolicies(),
+      ]);
+      dataForPrompt.tasks = allTasks;
+      dataForPrompt.policies = expiringPolicies;
       break;
     }
 

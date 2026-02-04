@@ -51,6 +51,11 @@ export async function handler(
   console.log('Path params:', event.pathParameters);
   logRequest(method, path, event.body);
 
+  // Handle CORS preflight
+  if (method === 'OPTIONS') {
+    return successResponse({}, 200);
+  }
+
   try {
     // Check for task ID in path
     const taskId = getRequiredPathParam(event.pathParameters, 'id');
@@ -71,6 +76,9 @@ export async function handler(
           break;
         case 'complete':
           result = await handleCompleteTask(taskId);
+          break;
+        case 'approve-with-edits':
+          result = await handleApproveWithEdits(taskId, event.body);
           break;
         default:
           console.log('Unknown action:', action);
@@ -122,7 +130,7 @@ function parseTaskActionFromPath(path: string): string | null {
   const segments = cleanPath.split('/').filter(Boolean);
   const action = segments[segments.length - 1];
 
-  if (action !== 'approve' && action !== 'reject' && action !== 'complete') {
+  if (action !== 'approve' && action !== 'reject' && action !== 'complete' && action !== 'approve-with-edits') {
     return null;
   }
 
@@ -340,4 +348,48 @@ async function handleCompleteTask(taskId: string): Promise<APIGatewayProxyResult
     task,
     message: 'Task completed successfully',
   });
+}
+
+/**
+ * Approve an AI-completed task with edits (Phase 4 enhancement)
+ */
+async function handleApproveWithEdits(
+  taskId: string,
+  body?: string | null
+): Promise<APIGatewayProxyResultV2> {
+  console.log('handleApproveWithEdits - task:', taskId);
+
+  const data = parseBody<{
+    original_content?: string;
+    edited_content?: string;
+  }>(body ?? undefined);
+
+  if (!data?.edited_content) {
+    return errorResponse('edited_content is required', 400);
+  }
+
+  try {
+    // Approve the task
+    const task = await approveTask(taskId);
+
+    if (!task) {
+      console.log('Task not found for approve-with-edits:', taskId);
+      return notFoundResponse('Task');
+    }
+
+    console.log('Task approved with edits successfully:', taskId);
+    return successResponse({
+      task_id: taskId,
+      status: 'completed',
+      sent_content: data.edited_content,
+      sent_at: new Date().toISOString(),
+      message: 'Task approved with edits successfully',
+    });
+  } catch (error) {
+    console.error('Error approving task with edits:', error);
+    return errorResponse(
+      error instanceof Error ? error.message : 'Failed to approve task with edits',
+      400
+    );
+  }
 }

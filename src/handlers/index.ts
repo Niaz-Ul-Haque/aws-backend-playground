@@ -8,3 +8,4 @@ export { handler as clientsHandler } from './clients';
 export { handler as policiesHandler } from './policies';
 export { handler as tasksHandler } from './tasks';
 export { handler as healthHandler } from './health';
+export { handler as actionsHandler } from './actions';

@@ -66,7 +66,7 @@ export const CARD_EMBEDDING_INSTRUCTIONS = `
 ## Card Embedding Format
 Embed cards on their own line: <<<CARD:card-type:{json}>>>
 
-Card types (include all relevant fields from the data provided):
+### Existing Card Types
 - **task-list**: {"title":"...","tasks":[{task_id,title,status,due_date,priority,client_name,ai_completed}],"show_actions":true}
 - **task**: {"task":{task_id,title,description,status,due_date,priority,client_id,client_name,tags,ai_completed},"show_actions":true}
 - **client**: {"client":{client_id,first_name,last_name,primary_email,client_status,client_segment,portfolio_value,risk_profile},"show_policies":true}
@@ -77,7 +77,27 @@ Card types (include all relevant fields from the data provided):
   action_type values: email_draft, meeting_notes, portfolio_review, policy_summary, client_summary, compliance_check, report, reminder, analysis, proposal, birthday_greeting, renewal_notice
 - **confirmation**: {"type":"success","message":"...","details":"..."}
 
-Example: <<<CARD:task-list:{"title":"Today's Tasks","tasks":[{"task_id":"T001","title":"Review portfolio","status":"pending","due_date":"2026-01-21T10:00:00Z","priority":"high","client_name":"John Smith","ai_completed":false}],"show_actions":true}>>>
+### Phase 1 Card Types
+- **email-composer**: {"to":"email@example.com","subject":"...","body":"...","related_task_id":"...","related_client_id":"...","editable":true,"available_actions":["send","copy","discard"]}
+- **data-table**: {"title":"...","description":"...","columns":[{"key":"...","header":"...","format":"text|number|currency|date|percent|status"}],"rows":[{...}],"sortable":true,"filterable":true,"pageSize":10}
+- **chart**: {"title":"...","chart_type":"line|bar|pie|donut","data":[{"name":"...","value":123}],"series":[{"key":"...","name":"...","color":"#..."}],"center_value":"...(for donut)","center_label":"...(for donut)"}
+- **compliance-check**: {"title":"...","client_id":"...","client_name":"...","check_date":"ISO date","overall_score":0-100,"items":[{"id":"...","label":"...","status":"pass|fail|warning|pending","description":"...","remediation":"..."}],"summary":"...","available_actions":["resolve","generate_report","schedule_review"]}
+
+### Phase 2 Card Types
+- **proposal**: {"proposal_id":"...","title":"...","client_id":"...","client_name":"...","status":"draft","created_date":"ISO","valid_until":"ISO","total_premium":1234,"premium_frequency":"annual","products":[{"id":"...","name":"...","type":"...","coverage_amount":500000,"premium":1200,"premium_frequency":"annual","features":["..."],"description":"..."}],"summary":"...","available_actions":["send","edit","copy"]}
+- **comparison**: {"title":"...","description":"...","options":[{"id":"...","name":"...","highlighted":false,"price":100,"price_label":"/month","attributes":{"coverage":500000,"duration":"20 years"}}],"attributes_config":[{"key":"...","label":"...","format":"text|currency|number|boolean"}],"recommendation":{"option_id":"...","reason":"..."}}
+- **dashboard**: {"title":"...","period":"...","metrics":[{"id":"...","label":"...","value":123,"format":"number|currency|percent","change":12.5,"change_direction":"up|down|neutral","sparkline":[1,2,3]}],"alerts":[{"id":"...","type":"info|warning|error","message":"...","action_label":"..."}]}
+- **portfolio-review**: {"client_id":"...","client_name":"...","as_of_date":"ISO","total_value":1000000,"total_gain_loss":50000,"total_gain_loss_percent":5.0,"risk_level":"Conservative|Moderate|Aggressive","allocation":[{"category":"...","value":450000,"percentage":45}],"holdings":[{"id":"...","name":"...","category":"...","current_value":100000}],"recommendations":["..."]}
+
+### Phase 3 Card Types
+- **calendar**: {"title":"...","view":"day|week|month","selected_date":"ISO date","events":[{"id":"...","title":"...","start":"ISO datetime","end":"ISO datetime","type":"meeting|task|reminder|birthday|renewal","client_name":"..."}],"available_actions":["add_event","reschedule"]}
+- **document-preview**: {"document_id":"...","title":"...","document_type":"...","file_type":"pdf|docx|image|other","preview_url":"...","download_url":"...","client_id":"...","status":"pending|signed|expired","available_actions":["download","share","sign"]}
+- **progress-tracker**: {"title":"...","entity_type":"application|claim|case|onboarding","current_step":2,"steps":[{"id":"...","label":"...","status":"completed|current|pending|error","completed_date":"ISO"}],"estimated_completion":"ISO","client_name":"..."}
+- **meeting-notes**: {"title":"...","date":"ISO","duration_minutes":60,"attendees":[{"name":"...","email":"..."}],"client_name":"...","notes":"...","action_items":[{"id":"...","description":"...","assignee":"...","due_date":"ISO","completed":false}],"summary":"...","editable":true}
+- **reminder**: {"reminder_id":"...","title":"...","description":"...","due_date":"ISO","due_time":"HH:MM","priority":"low|medium|high","client_name":"...","status":"pending|completed|snoozed","available_actions":["complete","snooze","edit","delete"]}
+- **renewal-notice**: {"title":"...","renewals":[{"id":"...","policy_id":"...","policy_number":"...","policy_type":"...","client_id":"...","client_name":"...","renewal_date":"ISO","current_premium":1200,"status":"pending|contacted|renewed|lapsed"}],"summary":{"total_count":5,"total_premium_at_risk":15000,"by_urgency":{"overdue":1,"this_week":2,"this_month":2}},"available_actions":["send_reminder","schedule_call","bulk_renew"]}
+
+Example: <<<CARD:email-composer:{"to":"john@email.com","subject":"Policy Renewal","body":"Dear John,...","editable":true,"available_actions":["send","copy","discard"]}>>>
 
 Rules: Cards on own line, valid JSON, mix with text for context.`;
 
@@ -199,6 +219,115 @@ Present using a review card with action_type "portfolio_review". DO NOT ask for 
 Present using a review card with action_type "meeting_notes".`,
 
   create_report: `The advisor wants you to create a report or document. Generate the complete document based on context and present it using a review card. DO NOT say you cannot create documents - you absolutely can and should.`,
+
+  // Phase 1: New card type intents
+  show_analytics: `The advisor wants to see their sales/performance analytics. Create a dashboard card with key metrics:
+- Monthly/quarterly revenue
+- Active clients count
+- Retention rate
+- Pending tasks
+Include sparklines where helpful and use percentage changes with direction indicators.
+Present using a dashboard card with relevant alerts for items needing attention.`,
+
+  run_compliance_check: `The advisor wants to run a compliance check for a client. Generate a comprehensive compliance-check card including:
+- KYC verification status (identity, address verification)
+- Risk assessment (last review date, risk profile alignment)
+- Suitability review (product suitability documentation)
+- Documentation completeness
+Set status as 'pass', 'fail', 'warning', or 'pending' for each item.
+Calculate an overall_score (0-100) based on the items.
+Include remediation steps for any failed or warning items.
+Present using a compliance-check card.`,
+
+  show_portfolio: `The advisor wants to see a client's portfolio. Generate a portfolio-review card with:
+- Asset allocation breakdown (as donut chart data)
+- Total portfolio value and gain/loss
+- Holdings with current values
+- Risk level assessment
+- Performance periods if available
+Present using a portfolio-review card.`,
+
+  // Phase 2: Proposal and comparison intents
+  create_proposal: `The advisor wants to create an insurance/product proposal. Generate a proposal card with:
+- Proposal title and client info
+- One or more products with coverage amounts, premiums, and features
+- Total premium calculation
+- Summary and notes
+- Status as 'draft'
+Present using a proposal card with available_actions for send, edit, copy.`,
+
+  compare_options: `The advisor wants to compare products or policy options. Generate a comparison card with:
+- Two or more options to compare
+- Key attributes for each (coverage, duration, premium, cash value, etc.)
+- Format currency and boolean values appropriately
+- Include a recommendation with reasoning if appropriate
+- Highlight the recommended option
+Present using a comparison card.`,
+
+  generate_report: `The advisor wants to generate a report. Determine the appropriate report type from context and generate it using the appropriate card type:
+- For compliance: use compliance-check card
+- For portfolio: use portfolio-review card
+- For general reports: use data-table card with relevant columns and rows
+Include a summary of the report contents.`,
+
+  send_email: `The advisor wants to send a previously drafted email. Confirm the send action and show a confirmation card. Note: In this POC, emails are not actually sent.`,
+
+  // Phase 3: Calendar/Scheduling intents
+  show_calendar: `The advisor wants to see their calendar/schedule. Generate a calendar card with:
+- Today's date as selected_date
+- Upcoming events (meetings, tasks, reminders, birthdays, renewals)
+- Each event should have title, start time, type, and optional client info
+Present using a calendar card with view set to 'day' or 'week' as appropriate.`,
+
+  schedule_meeting: `The advisor wants to schedule a meeting. Since we're creating a meeting:
+1. If client is specified, include their info
+2. Generate a proposed meeting time
+3. Create a confirmation with meeting details
+Present using a calendar card showing the newly scheduled event, or a confirmation card.`,
+
+  set_reminder: `The advisor wants to set a reminder. Generate a reminder card with:
+- Title extracted from their request
+- Due date/time based on their request
+- Priority level if mentioned
+- Related client if mentioned in context
+Present using a reminder card with available_actions for edit, complete, snooze.`,
+
+  preview_document: `The advisor wants to preview a document. Generate a document-preview card with:
+- Document title and type
+- File type (pdf, docx, etc.)
+- Preview URL (placeholder for POC)
+- Related client/policy if in context
+Present using a document-preview card.`,
+
+  track_progress: `The advisor wants to track application/claim/case progress. Generate a progress-tracker card with:
+- Clear title describing what's being tracked
+- Sequential steps with status (completed, current, pending)
+- Current step indicator
+- Estimated completion if applicable
+Present using a progress-tracker card.`,
+
+  create_meeting_notes: `The advisor wants to create meeting notes. Generate a meeting-notes card with:
+- Meeting title and date
+- Attendees if mentioned
+- Notes section (editable)
+- Action items extracted from conversation
+- Summary and next steps
+Present using a meeting-notes card with editable:true.`,
+
+  show_renewals: `The advisor wants to see policy renewals. Generate a renewal-notice card with:
+- List of policies due for renewal
+- Each with policy number, client name, renewal date, premium
+- Status for each (pending, contacted, renewed, lapsed)
+- Summary with totals by urgency
+Use data from expiring policies to populate. Present using a renewal-notice card.`,
+
+  // Phase 4: Bulk action intents
+  bulk_action: `The advisor wants to perform a bulk action (complete all tasks, renew all policies, etc.). 
+1. Identify what they want to do in bulk
+2. Show a confirmation with the items that will be affected
+3. Use a data-table card to list the items
+4. Include a message about using /api/actions/bulk-tasks or /api/actions/bulk-renewal
+Present with a confirmation message and list of items to be processed.`,
 
   // Search intents
   global_search: `The advisor is searching across all data. Search tasks, clients, and policies and present relevant results.`,

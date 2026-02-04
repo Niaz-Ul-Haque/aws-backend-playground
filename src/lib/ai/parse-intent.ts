@@ -341,6 +341,15 @@ const INTENT_PATTERNS: IntentPattern[] = [
       /(?:draft|write|compose|create)\s*(?:an?\s*)?email/i,
       /email\s*(?:to|for)\s*/i,
       /send\s*(?:an?\s*)?(?:email|message)\s*to/i,
+      /prepare\s*(?:an?\s*)?email/i,
+    ],
+  },
+  {
+    intent: 'send_email',
+    patterns: [
+      /^send\s*(?:it|the\s*email|that)$/i,
+      /send\s*(?:the\s*)?email\s*now/i,
+      /go\s*ahead\s*(?:and\s*)?send/i,
     ],
   },
   {
@@ -363,6 +372,37 @@ const INTENT_PATTERNS: IntentPattern[] = [
     patterns: [
       /(?:draft|write|create)\s*renewal\s*(?:notice|reminder)/i,
       /policy\s*(?:expiry|expiration)\s*(?:reminder|notice)/i,
+    ],
+  },
+  // Analytics intents (Phase 1)
+  {
+    intent: 'show_analytics',
+    patterns: [
+      /show\s*(?:me\s*)?(?:my\s*)?(?:sales?\s*)?(?:performance|analytics|metrics)/i,
+      /how\s*am\s*i\s*doing\s*(?:this\s*)?(?:quarter|month|year)?/i,
+      /my\s*(?:sales?\s*)?performance/i,
+      /(?:performance|analytics)\s*(?:report|data|metrics)/i,
+      /what(?:'s|s)?\s*my\s*(?:client\s*)?retention\s*rate/i,
+    ],
+  },
+  {
+    intent: 'show_portfolio',
+    patterns: [
+      /show\s*(?:me\s*)?(?:.*?)'?s?\s*portfolio/i,
+      /portfolio\s*(?:for|of)\s*/i,
+      /investment\s*breakdown/i,
+      /(?:his|her|their)\s*portfolio/i,
+      /portfolio\s*allocation/i,
+    ],
+  },
+  // Compliance intents (Phase 1)
+  {
+    intent: 'run_compliance_check',
+    patterns: [
+      /(?:run|do|perform|execute)\s*(?:a\s*)?(?:compliance|kyc)\s*check/i,
+      /check\s*(?:.*?)'?s?\s*compliance/i,
+      /kyc\s*(?:check|review|verification)/i,
+      /compliance\s*(?:check|review|audit)\s*(?:for|on)/i,
     ],
   },
   // Document generation intents
@@ -408,6 +448,105 @@ const INTENT_PATTERNS: IntentPattern[] = [
       /(?:create|generate|make|write|prepare|draft)\s*(?:a\s*)?(?:report|document|draft)/i,
       /(?:prepare|create)\s*(?:a\s*)?draft\s*(?:based\s*on|from|using)/i,
       /(?:generate|create)\s*(?:it|this|that)\s*(?:for\s*me)?/i,
+    ],
+  },
+  {
+    intent: 'generate_report',
+    patterns: [
+      /generate\s*(?:a\s*)?(?:compliance\s*)?report/i,
+      /create\s*(?:a\s*)?summary\s*report/i,
+    ],
+  },
+  // Proposal intents (Phase 2)
+  {
+    intent: 'create_proposal',
+    patterns: [
+      /(?:create|generate|prepare|make|draft)\s*(?:a\s*)?proposal/i,
+      /(?:create|generate|prepare)\s*(?:a\s*)?(?:insurance\s*)?quote/i,
+      /proposal\s*for\s*/i,
+      /prepare\s*(?:a\s*)?recommendation/i,
+    ],
+  },
+  {
+    intent: 'compare_options',
+    patterns: [
+      /compare\s*(?:term|whole|life|auto|home)/i,
+      /(?:term|whole)\s*(?:vs|versus|or)\s*(?:term|whole)/i,
+      /(?:show|what(?:'s|s)?)\s*(?:me\s*)?(?:the\s*)?(?:differences?|comparison)/i,
+      /which\s*(?:policy|insurance|option)\s*is\s*better/i,
+      /compare\s*(?:plan|option|product)s?/i,
+    ],
+  },
+  // Phase 3: Calendar/Scheduling intents
+  {
+    intent: 'show_calendar',
+    patterns: [
+      /(?:show|what(?:'s|s)?)\s*(?:on\s*)?(?:my\s*)?calendar/i,
+      /my\s*schedule\s*(?:for\s*)?(?:today|this\s*week|tomorrow)?/i,
+      /what(?:'s|s)?\s*(?:on\s*)?(?:my\s*)?(?:agenda|schedule)/i,
+      /upcoming\s*(?:meetings?|appointments?|events?)/i,
+    ],
+  },
+  {
+    intent: 'schedule_meeting',
+    patterns: [
+      /schedule\s*(?:a\s*)?meeting\s*(?:with)?/i,
+      /book\s*(?:a\s*)?(?:meeting|time|appointment)\s*(?:with)?/i,
+      /set\s*up\s*(?:a\s*)?(?:meeting|call)\s*(?:with)?/i,
+      /arrange\s*(?:a\s*)?meeting/i,
+    ],
+  },
+  {
+    intent: 'set_reminder',
+    patterns: [
+      /(?:set|create)\s*(?:a\s*)?reminder/i,
+      /remind\s*me\s*(?:to)?/i,
+      /(?:don't\s*let\s*me\s*)?forget\s*to/i,
+      /follow\s*up\s*(?:with|on)/i,
+    ],
+  },
+  {
+    intent: 'preview_document',
+    patterns: [
+      /(?:show|preview|view|open)\s*(?:the\s*)?(?:document|policy\s*document|contract|file)/i,
+      /(?:let\s*me\s*)?see\s*(?:the\s*)?document/i,
+      /(?:pull\s*up|display)\s*(?:the\s*)?(?:document|contract|file)/i,
+    ],
+  },
+  {
+    intent: 'track_progress',
+    patterns: [
+      /(?:what(?:'s|s)?|check)\s*(?:the\s*)?(?:application|claim|case)\s*(?:status|progress)/i,
+      /(?:where\s*are\s*we|status)\s*(?:on|with)\s*(?:the\s*)?(?:application|claim|case)/i,
+      /track\s*(?:the\s*)?(?:application|claim|case|progress)/i,
+      /(?:how\s*is|update\s*on)\s*(?:the\s*)?(?:application|claim|onboarding)/i,
+    ],
+  },
+  {
+    intent: 'create_meeting_notes',
+    patterns: [
+      /(?:take|create|write|log)\s*(?:meeting\s*)?notes?/i,
+      /(?:document|record)\s*(?:our|this|the)\s*(?:meeting|discussion|conversation)/i,
+      /meeting\s*(?:notes?|minutes|summary)/i,
+    ],
+  },
+  {
+    intent: 'show_renewals',
+    patterns: [
+      /(?:show|what|which)\s*(?:policies?\s*)?(?:are\s*)?(?:up\s*for\s*)?renewal/i,
+      /(?:upcoming|pending)\s*renewals?/i,
+      /policies?\s*(?:expiring|renewing)\s*(?:soon|this\s*week|this\s*month)?/i,
+      /renewal\s*(?:list|notice|schedule)/i,
+    ],
+  },
+  // Phase 4: Bulk action intents
+  {
+    intent: 'bulk_action',
+    patterns: [
+      /(?:complete|finish|mark)\s*all\s*(?:pending\s*)?tasks?/i,
+      /renew\s*all\s*(?:expiring\s*)?policies?/i,
+      /bulk\s*(?:complete|renew|update|action)/i,
+      /(?:do|process)\s*(?:all|them)\s*(?:at\s*once)?/i,
     ],
   },
   // Search intents

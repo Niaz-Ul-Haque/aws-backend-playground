@@ -179,6 +179,62 @@ Resources:
             RestApiId: !Ref CiriApi
             Path: /api/tasks/{id}/complete
             Method: POST
+        TasksApproveWithEdits:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/tasks/{id}/approve-with-edits
+            Method: POST
+
+  # Actions Handler - Action execution endpoints (Phase 1 & 2)
+  ActionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-actions'
+      CodeUri: src/
+      Handler: dist/handlers/actions.handler
+      Timeout: 30
+      MemorySize: 256
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DataTable
+      Events:
+        ActionsSendEmail:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/actions/send-email
+            Method: POST
+        ActionsResolveCompliance:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/actions/resolve-compliance
+            Method: POST
+        ActionsGenerateReport:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/actions/generate-report
+            Method: POST
+        ActionsExecute:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/actions/execute
+            Method: POST
+        ActionsBulkTasks:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/actions/bulk-tasks
+            Method: POST
+        ActionsBulkRenewal:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CiriApi
+            Path: /api/actions/bulk-renewal
+            Method: POST
 
   # Health Check Handler
   HealthFunction:
@@ -264,6 +320,10 @@ Outputs:
   TasksEndpoint:
     Description: Tasks API Endpoint
     Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}/api/tasks'
+
+  ActionsEndpoint:
+    Description: Actions API Endpoint
+    Value: !Sub 'https://${CiriApi}.execute-api.${AWS::Region}.amazonaws.com/${AWS::StackName}/api/actions'
 
   HealthEndpoint:
     Description: Health Check Endpoint

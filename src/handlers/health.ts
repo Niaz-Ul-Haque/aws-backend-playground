@@ -15,9 +15,16 @@ import { successResponse } from '../lib/utils/response';
 export async function handler(
   event: ApiGatewayEvent
 ): Promise<APIGatewayProxyResultV2> {
+  const method = getHttpMethod(event);
+  
   console.log('=== Health Check Handler ===');
-  console.log('Method:', getHttpMethod(event));
+  console.log('Method:', method);
   console.log('Path:', getPath(event));
+  
+  // Handle CORS preflight
+  if (method === 'OPTIONS') {
+    return successResponse({}, 200);
+  }
   
   const response = {
     status: 'healthy',

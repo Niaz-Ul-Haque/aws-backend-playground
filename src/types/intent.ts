@@ -42,23 +42,45 @@ export type UserIntent =
   | 'show_overdue_policies'
   // Analytics/Dashboard intents
   | 'show_dashboard'
+  | 'show_analytics'
   | 'show_task_summary'
   | 'show_client_summary'
   | 'show_policy_summary'
   | 'show_portfolio_summary'
   | 'show_today_summary'
   | 'show_week_summary'
+  | 'show_portfolio'
   // Communication intents
   | 'draft_email'
+  | 'send_email'
   | 'draft_meeting_notes'
   | 'draft_birthday_message'
   | 'draft_renewal_notice'
   // Document generation intents
+  | 'run_compliance_check'
   | 'create_compliance_check'
   | 'create_portfolio_analysis'
   | 'create_client_summary'
   | 'create_meeting_prep'
   | 'create_report'
+  | 'generate_report'
+  // Proposal intents (Phase 2)
+  | 'create_proposal'
+  | 'compare_options'
+  // Calendar/Scheduling intents (Phase 3)
+  | 'show_calendar'
+  | 'schedule_meeting'
+  | 'set_reminder'
+  // Document intents (Phase 3)
+  | 'preview_document'
+  // Progress tracking intents (Phase 3)
+  | 'track_progress'
+  // Meeting notes intents (Phase 3)
+  | 'create_meeting_notes'
+  // Renewal intents (Phase 3)
+  | 'show_renewals'
+  // Bulk action intents (Phase 4)
+  | 'bulk_action'
   // Search intents
   | 'global_search'
   | 'search_tasks'

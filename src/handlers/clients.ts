@@ -39,6 +39,11 @@ export async function handler(
   console.log('Path params:', event.pathParameters);
   logRequest(method, path);
 
+  // Handle CORS preflight
+  if (method === 'OPTIONS') {
+    return successResponse({}, 200);
+  }
+
   // Only allow GET
   if (method !== 'GET') {
     console.log('Invalid method, returning 405');
