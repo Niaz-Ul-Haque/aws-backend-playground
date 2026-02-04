@@ -124,7 +124,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunctionUrl
-      FunctionName: !Ref ChatStreamFunction
+      FunctionName: !GetAtt ChatStreamFunction.Arn
       Principal: '*'
       FunctionUrlAuthType: NONE
     DependsOn:
@@ -342,7 +342,7 @@ Outputs:
 
   ChatStreamEndpoint:
     Description: Chat Streaming Endpoint (SSE with status updates)
-    Value: !GetAtt ChatStreamFunctionUrl.FunctionUrl
+    Value: !Ref ChatStreamFunctionUrl
 
   ClientsEndpoint:
     Description: Clients API Endpoint
